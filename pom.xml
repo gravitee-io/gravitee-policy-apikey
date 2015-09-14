@@ -53,10 +53,23 @@
         </dependency>
 
         <dependency>
-            <groupId>io.gravitee.repositories</groupId>
+            <groupId>io.gravitee.repository</groupId>
             <artifactId>gravitee-repository</artifactId>
             <version>${gravitee-api.version}</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
         </dependency>
 
         <!-- Test scope -->
@@ -83,25 +96,6 @@
             </resource>
         </resources>
         <plugins>
-            <plugin>
-                <groupId>io.gravitee.maven.plugins</groupId>
-                <artifactId>json-schema-generator-maven-plugin</artifactId>
-                <version>${json-schema-generator-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>generate-json-schemas</goal>
-                        </goals>
-                        <configuration>
-                            <includes>
-                                <include>io/gravitee/policy/apikey/ApiKeyPolicyConfiguration.class</include>
-                            </includes>
-                            <outputDirectory>${json-schema-generator-maven-plugin.outputDirectory}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>${maven-assembly-plugin.version}</version>
