@@ -54,11 +54,6 @@ public class ApiKeyPolicy {
                 final Optional<ApiKey> apiKeyOpt = policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader);
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
-                    // Si revoked = true => 403
-                    // Si revoked = false && expiration == null => OK
-                    // Si revoked = false && expiration passée => 403
-
-
                     if (!apiKey.isRevoked() &&
                             ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(request.timestamp())))) {
                         LOGGER.debug("API Key for request {} has been validated.", request.id());
