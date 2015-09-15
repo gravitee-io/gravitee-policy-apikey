@@ -91,6 +91,25 @@
         </resources>
         <plugins>
             <plugin>
+                <groupId>io.gravitee.maven.plugins</groupId>
+                <artifactId>json-schema-generator-maven-plugin</artifactId>
+                <version>${json-schema-generator-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>generate-json-schemas</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>io/gravitee/policy/apikey/configuration/ApiKeyPolicyConfiguration.class</include>
+                            </includes>
+                            <outputDirectory>${json-schema-generator-maven-plugin.outputDirectory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>${maven-assembly-plugin.version}</version>
                 <configuration>

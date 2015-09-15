@@ -22,9 +22,10 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.policy.PolicyChain;
 import io.gravitee.gateway.api.policy.PolicyContext;
 import io.gravitee.gateway.api.policy.annotations.OnRequest;
+import io.gravitee.policy.apikey.configuration.ApiKey;
+import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.api.ApiKeyRepository;
 import io.gravitee.repository.exceptions.TechnicalException;
-import io.gravitee.repository.model.ApiKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,20 @@ public class ApiKeyPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyPolicy.class);
 
+    /**
+     * The associated configuration to this API Key Policy
+     */
+    private ApiKeyPolicyConfiguration configuration;
+
+    /**
+     * Create a new API Key Policy instance based on its associated configuration
+     *
+     * @param configuration the associated configuration to the API Key Policy instance
+     */
+    public ApiKeyPolicy(ApiKeyPolicyConfiguration configuration) {
+        this.configuration = configuration;
+    }
+
     @OnRequest
     public void onRequest(Request request, Response response, PolicyContext policyContext, PolicyChain policyChain) {
         final String apiKeyHeader = request.headers().get(GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString());
@@ -49,32 +64,52 @@ public class ApiKeyPolicy {
             // The api key is required
             policyChain.sendError(HttpStatusCode.UNAUTHORIZED_401);
         } else {
+            Optional<ApiKey> apiKeyOpt = Optional.empty();
+
             // Check if the api key exists and is valid
-            try {
-                final Optional<ApiKey> apiKeyOpt = policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader);
-                if (apiKeyOpt.isPresent()) {
-                    ApiKey apiKey = apiKeyOpt.get();
-                    if (!apiKey.isRevoked() &&
-                            ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(request.timestamp())))) {
-                        LOGGER.debug("API Key for request {} has been validated.", request.id());
+            if (configuration != null && ! configuration.getKeys().isEmpty()) {
+                apiKeyOpt = configuration.getKeys().stream().filter(apiKey -> apiKey.getKey().equals(apiKeyHeader)).findFirst();
+            } else {
+                try {
+                    apiKeyOpt = Optional.ofNullable(convert(policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader)));
+                } catch (TechnicalException te) {
+                    LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
+                    policyChain.sendError(HttpStatusCode.INTERNAL_SERVER_ERROR_500, te);
+                }
+            }
 
-                        policyChain.doNext(request, response);
-                    } else {
-                        LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
+            if (apiKeyOpt.isPresent()) {
+                ApiKey apiKey = apiKeyOpt.get();
+                if (!apiKey.isRevoked() &&
+                        ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(request.timestamp())))) {
+                    LOGGER.debug("API Key for request {} has been validated.", request.id());
 
-                        // The api key is not valid
-                        policyChain.sendError(HttpStatusCode.FORBIDDEN_403);
-                    }
+                    policyChain.doNext(request, response);
                 } else {
                     LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
-                    // The api key does not exist
+
+                    // The api key is not valid
                     policyChain.sendError(HttpStatusCode.FORBIDDEN_403);
                 }
-            } catch (TechnicalException te) {
-                LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.sendError(HttpStatusCode.INTERNAL_SERVER_ERROR_500, te);
+            } else {
+                LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
+                // The api key does not exist
+                policyChain.sendError(HttpStatusCode.FORBIDDEN_403);
             }
         }
     }
 
+    private ApiKey convert(Optional<io.gravitee.repository.model.ApiKey> apiKeyRepo) {
+        if (! apiKeyRepo.isPresent())  {
+            return null;
+        }
+
+        ApiKey key = new ApiKey();
+
+        key.setKey(apiKeyRepo.get().getKey());
+        key.setRevoked(apiKeyRepo.get().isRevoked());
+        key.setExpiration(apiKeyRepo.get().getExpiration());
+
+        return key;
+    }
 }
