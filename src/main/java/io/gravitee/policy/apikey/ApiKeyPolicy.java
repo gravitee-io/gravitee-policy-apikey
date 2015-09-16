@@ -21,6 +21,7 @@ import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.policy.PolicyChain;
 import io.gravitee.gateway.api.policy.PolicyContext;
+import io.gravitee.gateway.api.policy.PolicyResult;
 import io.gravitee.gateway.api.policy.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKey;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
@@ -62,7 +63,22 @@ public class ApiKeyPolicy {
             LOGGER.debug("No {} header value for request {}. Returning 401 status code.",
                     GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString(), request.id());
             // The api key is required
-            policyChain.sendError(HttpStatusCode.UNAUTHORIZED_401);
+            policyChain.failWith(new PolicyResult() {
+                @Override
+                public boolean isFailure() {
+                    return true;
+                }
+
+                @Override
+                public int httpStatusCode() {
+                    return HttpStatusCode.UNAUTHORIZED_401;
+                }
+
+                @Override
+                public String message() {
+                    return "An HTTP header value must be specified for " + GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString();
+                }
+            });
         } else {
             Optional<ApiKey> apiKeyOpt = Optional.empty();
 
@@ -74,7 +90,22 @@ public class ApiKeyPolicy {
                     apiKeyOpt = Optional.ofNullable(convert(policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader)));
                 } catch (TechnicalException te) {
                     LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                    policyChain.sendError(HttpStatusCode.INTERNAL_SERVER_ERROR_500, te);
+                    policyChain.failWith(new PolicyResult() {
+                        @Override
+                        public boolean isFailure() {
+                            return true;
+                        }
+
+                        @Override
+                        public int httpStatusCode() {
+                            return HttpStatusCode.INTERNAL_SERVER_ERROR_500;
+                        }
+
+                        @Override
+                        public String message() {
+                            return "An unexpected error occurs while getting API Key from repository";
+                        }
+                    });
                 }
             }
 
@@ -89,12 +120,42 @@ public class ApiKeyPolicy {
                     LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
 
                     // The api key is not valid
-                    policyChain.sendError(HttpStatusCode.FORBIDDEN_403);
+                    policyChain.failWith(new PolicyResult() {
+                        @Override
+                        public boolean isFailure() {
+                            return true;
+                        }
+
+                        @Override
+                        public int httpStatusCode() {
+                            return HttpStatusCode.FORBIDDEN_403;
+                        }
+
+                        @Override
+                        public String message() {
+                            return "API Key " + apiKeyHeader + " is not valid or is expired / revoked.";
+                        }
+                    });
                 }
             } else {
                 LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
                 // The api key does not exist
-                policyChain.sendError(HttpStatusCode.FORBIDDEN_403);
+                policyChain.failWith(new PolicyResult() {
+                    @Override
+                    public boolean isFailure() {
+                        return true;
+                    }
+
+                    @Override
+                    public int httpStatusCode() {
+                        return HttpStatusCode.FORBIDDEN_403;
+                    }
+
+                    @Override
+                    public String message() {
+                        return "API Key " + apiKeyHeader + " is not valid or is expired / revoked.";
+                    }
+                });
             }
         }
     }

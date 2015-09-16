@@ -16,11 +16,11 @@
 package io.gravitee.policy.apikey;
 
 
-import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.policy.PolicyChain;
 import io.gravitee.gateway.api.policy.PolicyContext;
+import io.gravitee.gateway.api.policy.PolicyResult;
 import io.gravitee.repository.api.ApiKeyRepository;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.model.ApiKey;
@@ -141,7 +141,7 @@ public class ApiKeyPolicyTest {
         apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).sendError(HttpStatusCode.UNAUTHORIZED_401);
+        verify(policyChain).failWith(any(PolicyResult.class));
     }
 
     @Test
@@ -163,7 +163,7 @@ public class ApiKeyPolicyTest {
         apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).sendError(HttpStatusCode.FORBIDDEN_403);
+        verify(policyChain).failWith(any(PolicyResult.class));
     }
 
     @Test
@@ -183,6 +183,6 @@ public class ApiKeyPolicyTest {
         apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).sendError(HttpStatusCode.FORBIDDEN_403);
+        verify(policyChain).failWith(any(PolicyResult.class));
     }
 }
