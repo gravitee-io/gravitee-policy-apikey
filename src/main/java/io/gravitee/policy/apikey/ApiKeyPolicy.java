@@ -30,6 +30,7 @@ import io.gravitee.repository.exceptions.TechnicalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.Optional;
 
 /**
@@ -56,14 +57,14 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, PolicyContext policyContext, PolicyChain policyChain) {
-        final String apiName = request.headers().get(GraviteeHttpHeader.X_GRAVITEE_API_NAME.toString());
+        final String apiName = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_NAME);
 
-        final String apiKeyHeader = request.headers().get(GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString());
+        final String apiKeyHeader = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
 
-        LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString(), request.id());
+        LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
         if (apiKeyHeader == null || apiKeyHeader.isEmpty()) {
             LOGGER.debug("No {} header value for request {}. Returning 401 status code.",
-                    GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString(), request.id());
+                    GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
             // The api key is required
             policyChain.failWith(new PolicyResult() {
                 @Override
@@ -78,7 +79,7 @@ public class ApiKeyPolicy {
 
                 @Override
                 public String message() {
-                    return "An HTTP header value must be specified for " + GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString();
+                    return "An HTTP header value must be specified for " + GraviteeHttpHeader.X_GRAVITEE_API_KEY;
                 }
             });
         } else {
@@ -117,7 +118,7 @@ public class ApiKeyPolicy {
                 ApiKey apiKey = apiKeyOpt.get();
                 if (!apiKey.isRevoked() &&
                         ((apiKey.isApiScoped()) || (apiKey.getApi().equalsIgnoreCase(apiName)))   &&
-                        ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(request.timestamp())))) {
+                        ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(Date.from(request.timestamp()))))) {
                     LOGGER.debug("API Key for request {} has been validated.", request.id());
 
                     policyChain.doNext(request, response);
