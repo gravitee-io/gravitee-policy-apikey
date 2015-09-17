@@ -29,6 +29,10 @@ public class ApiKey {
 
     private Date expiration;
 
+    private String api;
+
+    private boolean apiScoped = true;
+
     public String getKey() {
         return key;
     }
@@ -51,6 +55,22 @@ public class ApiKey {
 
     public void setExpiration(Date expiration) {
         this.expiration = expiration;
+    }
+
+    public String getApi() {
+        return api;
+    }
+
+    public void setApi(String api) {
+        this.api = api;
+    }
+
+    public boolean isApiScoped() {
+        return apiScoped;
+    }
+
+    public void setApiScoped(boolean apiScoped) {
+        this.apiScoped = apiScoped;
     }
 
     @Override

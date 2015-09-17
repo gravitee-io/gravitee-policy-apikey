@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
+import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_NAME;
 import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -46,6 +47,8 @@ import static org.mockito.MockitoAnnotations.initMocks;
 public class ApiKeyPolicyTest {
 
     private static final String API_KEY_HEADER_VALUE = "fbc40d50-5746-40af-b283-d7e99c1775c7";
+
+    private static final String API_NAME_HEADER_VALUE = "my-api";
 
     @InjectMocks
     private ApiKeyPolicy apiKeyPolicy;
@@ -71,10 +74,12 @@ public class ApiKeyPolicyTest {
         final Map<String, String> headers = new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY.toString(), API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
             }
         };
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
         when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
@@ -91,11 +96,13 @@ public class ApiKeyPolicyTest {
         final Map<String, String> headers = new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY.toString(), API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
             }
         };
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpiration(new Date());
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
 
         Date requestDate = Date.from(validApiKey.getExpiration().toInstant().minus(Duration.ofHours(1)));
 
@@ -111,15 +118,43 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testOnRequest_withExpiredKey() throws TechnicalException {
+    public void testOnRequest_withUnexpiredKeyAndBadApi() throws TechnicalException {
         final Map<String, String> headers = new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY.toString(), API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
             }
         };
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpiration(new Date());
+        validApiKey.setApi("an-other-api");
+
+        Date requestDate = Date.from(validApiKey.getExpiration().toInstant().minus(Duration.ofHours(1)));
+
+        when(request.headers()).thenReturn(headers);
+        when(request.timestamp()).thenReturn(requestDate);
+        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+
+        verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
+        verify(policyChain, times(0)).doNext(request, response);
+    }
+
+    @Test
+    public void testOnRequest_withExpiredKey() throws TechnicalException {
+        final Map<String, String> headers = new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_KEY.toString(), API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
+            }
+        };
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setExpiration(new Date());
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
 
         Date requestDate = Date.from(validApiKey.getExpiration().toInstant().plus(Duration.ofHours(1)));
 
@@ -132,6 +167,7 @@ public class ApiKeyPolicyTest {
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
+        verify(policyChain).failWith(any(PolicyResult.class));
     }
 
     @Test
@@ -150,6 +186,7 @@ public class ApiKeyPolicyTest {
         final Map<String, String> headers = new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY.toString(), notExistingApiKey);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
             }
         };
         final ApiKey validApiKey = new ApiKey();
@@ -171,10 +208,12 @@ public class ApiKeyPolicyTest {
         final Map<String, String> headers = new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY.toString(), API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME.toString(), API_NAME_HEADER_VALUE);
             }
         };
         final ApiKey invalidApiKey = new ApiKey();
         invalidApiKey.setRevoked(true);
+
 
         when(request.headers()).thenReturn(headers);
         when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);

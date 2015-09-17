@@ -56,6 +56,8 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, PolicyContext policyContext, PolicyChain policyChain) {
+        final String apiName = request.headers().get(GraviteeHttpHeader.X_GRAVITEE_API_NAME.toString());
+
         final String apiKeyHeader = request.headers().get(GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString());
 
         LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY.toString(), request.id());
@@ -84,7 +86,9 @@ public class ApiKeyPolicy {
 
             // Check if the api key exists and is valid
             if (configuration != null && ! configuration.getKeys().isEmpty()) {
-                apiKeyOpt = configuration.getKeys().stream().filter(apiKey -> apiKey.getKey().equals(apiKeyHeader)).findFirst();
+                apiKeyOpt = configuration.getKeys().stream()
+                        .filter(apiKey -> apiKey.getKey().equals(apiKeyHeader))
+                        .findFirst();
             } else {
                 try {
                     apiKeyOpt = Optional.ofNullable(convert(policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader)));
@@ -112,6 +116,7 @@ public class ApiKeyPolicy {
             if (apiKeyOpt.isPresent()) {
                 ApiKey apiKey = apiKeyOpt.get();
                 if (!apiKey.isRevoked() &&
+                        ((apiKey.isApiScoped()) || (apiKey.getApi().equalsIgnoreCase(apiName)))   &&
                         ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(request.timestamp())))) {
                     LOGGER.debug("API Key for request {} has been validated.", request.id());
 
@@ -170,6 +175,8 @@ public class ApiKeyPolicy {
         key.setKey(apiKeyRepo.get().getKey());
         key.setRevoked(apiKeyRepo.get().isRevoked());
         key.setExpiration(apiKeyRepo.get().getExpiration());
+        key.setApi(apiKeyRepo.get().getApi());
+        key.setApiScoped(false);
 
         return key;
     }
