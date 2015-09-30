@@ -25,7 +25,7 @@ import io.gravitee.gateway.api.policy.PolicyResult;
 import io.gravitee.gateway.api.policy.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKey;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.repository.api.ApiKeyRepository;
+import io.gravitee.repository.api.management.ApiKeyRepository;
 import io.gravitee.repository.exceptions.TechnicalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,7 +166,7 @@ public class ApiKeyPolicy {
         }
     }
 
-    private ApiKey convert(Optional<io.gravitee.repository.model.ApiKey> apiKeyRepo) {
+    private ApiKey convert(Optional<io.gravitee.repository.model.management.ApiKey> apiKeyRepo) {
         if (! apiKeyRepo.isPresent())  {
             return null;
         }
