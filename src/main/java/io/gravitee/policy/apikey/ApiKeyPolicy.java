@@ -41,6 +41,8 @@ public class ApiKeyPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyPolicy.class);
 
+    final static String API_KEY_QUERY_PARAMETER = "api-key";
+
     /**
      * The associated configuration to this API Key Policy
      */
@@ -59,12 +61,11 @@ public class ApiKeyPolicy {
     public void onRequest(Request request, Response response, PolicyContext policyContext, PolicyChain policyChain) {
         final String apiName = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_NAME);
 
-        final String apiKeyHeader = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+        String requestApiKey = lookForApiKey(request);
 
-        LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
-        if (apiKeyHeader == null || apiKeyHeader.isEmpty()) {
-            LOGGER.debug("No {} header value for request {}. Returning 401 status code.",
-                    GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
+        if (requestApiKey == null || requestApiKey.isEmpty()) {
+            LOGGER.debug("No API Key has been specified for request {}. Returning 401 status code.", request.id());
+
             // The api key is required
             policyChain.failWith(new PolicyResult() {
                 @Override
@@ -79,7 +80,8 @@ public class ApiKeyPolicy {
 
                 @Override
                 public String message() {
-                    return "An HTTP header value must be specified for " + GraviteeHttpHeader.X_GRAVITEE_API_KEY;
+                    return "No API Key has been specified in headers (" + GraviteeHttpHeader.X_GRAVITEE_API_KEY
+                            + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ").";
                 }
             });
         } else {
@@ -88,11 +90,11 @@ public class ApiKeyPolicy {
             // Check if the api key exists and is valid
             if (configuration != null && ! configuration.getKeys().isEmpty()) {
                 apiKeyOpt = configuration.getKeys().stream()
-                        .filter(apiKey -> apiKey.getKey().equals(apiKeyHeader))
+                        .filter(apiKey -> apiKey.getKey().equals(apiKey))
                         .findFirst();
             } else {
                 try {
-                    apiKeyOpt = Optional.ofNullable(convert(policyContext.getComponent(ApiKeyRepository.class).retrieve(apiKeyHeader)));
+                    apiKeyOpt = Optional.ofNullable(convert(policyContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey)));
                 } catch (TechnicalException te) {
                     LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
                     policyChain.failWith(new PolicyResult() {
@@ -139,7 +141,7 @@ public class ApiKeyPolicy {
 
                         @Override
                         public String message() {
-                            return "API Key " + apiKeyHeader + " is not valid or is expired / revoked.";
+                            return "API Key " + requestApiKey + " is not valid or is expired / revoked.";
                         }
                     });
                 }
@@ -159,11 +161,28 @@ public class ApiKeyPolicy {
 
                     @Override
                     public String message() {
-                        return "API Key " + apiKeyHeader + " is not valid or is expired / revoked.";
+                        return "API Key " + requestApiKey + " is not valid or is expired / revoked.";
                     }
                 });
             }
         }
+    }
+
+    private String lookForApiKey(Request request) {
+        // 1_ First, search in HTTP headers
+        String apiKey = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+
+        LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
+        if (apiKey == null || apiKey.isEmpty()) {
+            LOGGER.debug("No '{}' header value for request {}. Fallback to query param. Returning 401 status code.",
+                    GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
+
+            // 2_ If not found, search in query parameters
+            apiKey = request.parameters().getOrDefault(API_KEY_QUERY_PARAMETER, null);
+            LOGGER.debug("No '{}' parameter for request {}. Returning empty API Key", API_KEY_QUERY_PARAMETER, request.id());
+        }
+
+        return apiKey;
     }
 
     private ApiKey convert(Optional<io.gravitee.repository.management.model.ApiKey> apiKeyRepo) {

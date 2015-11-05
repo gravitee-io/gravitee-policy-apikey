@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
@@ -176,7 +177,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testOnRequestFailBecauseNoApiKeyOnHeader() {
+    public void testOnRequestFailBecauseNoApiKey() {
         final HttpHeaders headers = new HttpHeaders();
 
         when(request.headers()).thenReturn(headers);
@@ -185,6 +186,34 @@ public class ApiKeyPolicyTest {
 
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
+    }
+
+    @Test
+    public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
+            }
+        });
+
+        final Map<String, String> parameters = new HashMap<>();
+        parameters.put(ApiKeyPolicy.API_KEY_QUERY_PARAMETER, API_KEY_HEADER_VALUE);
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(request.parameters()).thenReturn(parameters);
+
+        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+
+        verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
     }
 
     @Test
