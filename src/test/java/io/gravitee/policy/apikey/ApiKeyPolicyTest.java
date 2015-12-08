@@ -22,6 +22,7 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyContext;
 import io.gravitee.policy.api.PolicyResult;
+import io.gravitee.reporter.api.metrics.Metrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -65,9 +66,14 @@ public class ApiKeyPolicyTest {
     @Mock
     protected PolicyContext policyContext;
 
+    @Mock
+    protected Metrics metrics;
+
     @Before
     public void init() {
         initMocks(this);
+
+        when(response.metrics()).thenReturn(metrics);
     }
 
     @Test
