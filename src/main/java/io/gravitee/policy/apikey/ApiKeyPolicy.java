@@ -70,12 +70,17 @@ public class ApiKeyPolicy {
                 }
             });
         } else {
-
             try {
                 Optional<ApiKey> apiKeyOpt = policyContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey);
 
+                // Set API Key in metrics even if the key is not valid, it's just to track calls with by API key
+                response.metrics().setApiKey(requestApiKey);
+
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
+
+                    response.metrics().setApplication(apiKey.getApplication());
+
                     if (!apiKey.isRevoked() &&
                             (apiKey.getApi().equalsIgnoreCase(apiName)) &&
                             ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(Date.from(request.timestamp()))))) {
