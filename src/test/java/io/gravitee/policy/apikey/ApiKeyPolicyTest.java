@@ -17,10 +17,10 @@ package io.gravitee.policy.apikey;
 
 
 import io.gravitee.common.http.HttpHeaders;
+import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
-import io.gravitee.policy.api.PolicyContext;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.reporter.api.metrics.Metrics;
 import io.gravitee.repository.exceptions.TechnicalException;
@@ -64,7 +64,7 @@ public class ApiKeyPolicyTest {
     @Mock
     protected PolicyChain policyChain;
     @Mock
-    protected PolicyContext policyContext;
+    protected ExecutionContext executionContext;
 
     @Mock
     protected Metrics metrics;
@@ -91,10 +91,10 @@ public class ApiKeyPolicyTest {
         validApiKey.setApi(API_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
@@ -118,10 +118,10 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
@@ -145,10 +145,10 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
@@ -172,10 +172,10 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
@@ -188,7 +188,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
@@ -213,10 +213,10 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(parameters);
 
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
@@ -237,11 +237,11 @@ public class ApiKeyPolicyTest {
         validApiKey.setRevoked(false);
 
         when(request.headers()).thenReturn(headers);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
         when(apiKeyRepository.retrieve(notExistingApiKey)).thenReturn(Optional.empty());
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
@@ -261,10 +261,10 @@ public class ApiKeyPolicyTest {
 
 
         when(request.headers()).thenReturn(headers);
-        when(policyContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
 
-        apiKeyPolicy.onRequest(request, response, policyContext, policyChain);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));

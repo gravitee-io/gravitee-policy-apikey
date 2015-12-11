@@ -17,10 +17,10 @@ package io.gravitee.policy.apikey;
 
 import io.gravitee.common.http.GraviteeHttpHeader;
 import io.gravitee.common.http.HttpStatusCode;
+import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
-import io.gravitee.policy.api.PolicyContext;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.repository.exceptions.TechnicalException;
@@ -43,7 +43,7 @@ public class ApiKeyPolicy {
     final static String API_KEY_QUERY_PARAMETER = "api-key";
 
     @OnRequest
-    public void onRequest(Request request, Response response, PolicyContext policyContext, PolicyChain policyChain) {
+    public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
         final String apiName = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_NAME);
 
         String requestApiKey = lookForApiKey(request);
@@ -71,7 +71,7 @@ public class ApiKeyPolicy {
             });
         } else {
             try {
-                Optional<ApiKey> apiKeyOpt = policyContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey);
+                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey);
 
                 // Set API Key in metrics even if the key is not valid, it's just to track calls with by API key
                 response.metrics().setApiKey(requestApiKey);
