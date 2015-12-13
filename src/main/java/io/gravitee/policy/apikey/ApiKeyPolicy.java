@@ -79,6 +79,9 @@ public class ApiKeyPolicy {
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
 
+                    executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
+                    executionContext.setAttribute(ExecutionContext.ATTR_API_KEY, apiKey.getKey());
+                    
                     response.metrics().setApplication(apiKey.getApplication());
 
                     if (!apiKey.isRevoked() &&
