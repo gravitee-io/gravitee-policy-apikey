@@ -22,14 +22,15 @@ import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
+import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.reporter.api.metrics.Metrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -52,8 +53,10 @@ public class ApiKeyPolicyTest {
 
     private static final String API_NAME_HEADER_VALUE = "my-api";
 
-    @InjectMocks
     private ApiKeyPolicy apiKeyPolicy;
+
+    @Mock
+    private ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
     @Mock
     private ApiKeyRepository apiKeyRepository;
@@ -73,6 +76,7 @@ public class ApiKeyPolicyTest {
     public void init() {
         initMocks(this);
 
+        apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
         when(response.metrics()).thenReturn(metrics);
     }
 
@@ -268,5 +272,56 @@ public class ApiKeyPolicyTest {
 
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
+    }
+
+    @Test
+    public void testApiKey_notPropagated() throws TechnicalException{
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
+            }
+        });
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+
+        Assert.assertFalse(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
+    }
+
+    @Test
+    public void testApiKey_propagated() throws TechnicalException{
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
+            }
+        });
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setApi(API_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+
+        Assert.assertTrue(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        verify(apiKeyRepository).retrieve(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
     }
 }

@@ -1,0 +1,10 @@
+{
+  "type" : "object",
+  "id" : "urn:jsonschema:io:gravitee:policy:apikey:configuration:ApiKeyPolicyConfiguration",
+  "properties" : {
+    "propagateApiKey" : {
+      "title": "Propagate API Key to upstream API",
+      "type" : "boolean"
+    }
+  }
+}

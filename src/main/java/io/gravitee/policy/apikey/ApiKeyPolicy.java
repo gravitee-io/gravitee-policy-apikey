@@ -23,6 +23,7 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
+import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -41,6 +42,12 @@ public class ApiKeyPolicy {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyPolicy.class);
 
     final static String API_KEY_QUERY_PARAMETER = "api-key";
+
+    private final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
+
+    public ApiKeyPolicy(ApiKeyPolicyConfiguration apiKeyPolicyConfiguration) {
+        this.apiKeyPolicyConfiguration = apiKeyPolicyConfiguration;
+    }
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
@@ -165,6 +172,11 @@ public class ApiKeyPolicy {
             // 2_ If not found, search in query parameters
             apiKey = request.parameters().getOrDefault(API_KEY_QUERY_PARAMETER, null);
             LOGGER.debug("No '{}' parameter for request {}. Returning empty API Key", API_KEY_QUERY_PARAMETER, request.id());
+        }
+
+        if (! apiKeyPolicyConfiguration.isPropagateApiKey()) {
+            request.headers().remove(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+            request.parameters().remove(API_KEY_QUERY_PARAMETER);
         }
 
         return apiKey;
