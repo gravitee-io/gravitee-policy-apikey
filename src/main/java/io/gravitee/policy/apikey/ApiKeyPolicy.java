@@ -51,8 +51,6 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        final String apiName = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_NAME);
-
         String requestApiKey = lookForApiKey(request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
@@ -91,6 +89,7 @@ public class ApiKeyPolicy {
                     
                     response.metrics().setApplication(apiKey.getApplication());
 
+                    final String apiName = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
                     if (!apiKey.isRevoked() &&
                             (apiKey.getApi().equalsIgnoreCase(apiName)) &&
                             ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(Date.from(request.timestamp()))))) {

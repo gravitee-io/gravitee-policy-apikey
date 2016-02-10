@@ -86,7 +86,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
 
@@ -96,6 +95,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -110,7 +110,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
         final ApiKey validApiKey = new ApiKey();
@@ -123,6 +122,7 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -137,7 +137,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
         final ApiKey validApiKey = new ApiKey();
@@ -150,6 +149,7 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -164,7 +164,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
         final ApiKey validApiKey = new ApiKey();
@@ -177,6 +176,7 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -201,11 +201,6 @@ public class ApiKeyPolicyTest {
     @Test
     public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
         final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
-            }
-        });
 
         final Map<String, String> parameters = new HashMap<>();
         parameters.put(ApiKeyPolicy.API_KEY_QUERY_PARAMETER, API_KEY_HEADER_VALUE);
@@ -218,6 +213,7 @@ public class ApiKeyPolicyTest {
         when(request.parameters()).thenReturn(parameters);
 
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -233,7 +229,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, notExistingApiKey);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
 
@@ -242,6 +237,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
         when(apiKeyRepository.retrieve(notExistingApiKey)).thenReturn(Optional.empty());
 
@@ -257,7 +253,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
         final ApiKey invalidApiKey = new ApiKey();
@@ -266,6 +261,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -280,7 +276,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
 
@@ -290,6 +285,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
@@ -305,7 +301,6 @@ public class ApiKeyPolicyTest {
         headers.setAll(new HashMap<String, String>() {
             {
                 put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-                put(X_GRAVITEE_API_NAME, API_NAME_HEADER_VALUE);
             }
         });
 
@@ -315,6 +310,7 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.retrieve(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
