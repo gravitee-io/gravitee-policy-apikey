@@ -1,0 +1,44 @@
+=== API Key Policy
+
+https://github.com/gravitee-io/gravitee-policy-apikey[Source code],
+image:http://build.gravitee.io/jenkins/buildStatus/icon?job=gravitee-policy-apikey["Build status", link="http://build.gravitee.io/jenkins/job/gravitee-policy-apikey/"]
+
+==== Scope
+
+|===
+|onRequest |onResponse
+
+|X
+|
+
+|===
+
+==== Description
+
+The ApiKey Gravitee policy lets you enforce verification of API keys at runtime, letting only apps with approved API keys access your APIs.
+
+This policy ensures that API keys are valid, have not been revoked, and are approved to consume the specific resources associated with your API products.
+
+==== Configuration
+
+You can configure the policy with the following options :
+
+|===
+|Property |Required |Description |Type |Default
+
+|Todo
+|Todo
+|Todo
+|Todo
+|_todo_
+
+|===
+
+
+[source, json]
+.Sample
+----
+"gravitee-policy-ipfiltering": {
+  "todo": true
+}
+----
