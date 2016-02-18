@@ -38,7 +38,7 @@ You can configure the policy with the following options :
 [source, json]
 .Sample
 ----
-"gravitee-policy-ipfiltering": {
+"api-key": {
   "todo": true
 }
 ----
