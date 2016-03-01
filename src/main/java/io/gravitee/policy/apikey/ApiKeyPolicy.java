@@ -79,15 +79,15 @@ public class ApiKeyPolicy {
                 Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey);
 
                 // Set API Key in metrics even if the key is not valid, it's just to track calls with by API key
-                response.metrics().setApiKey(requestApiKey);
+                request.metrics().setApiKey(requestApiKey);
 
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
 
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
                     executionContext.setAttribute(ExecutionContext.ATTR_API_KEY, apiKey.getKey());
-                    
-                    response.metrics().setApplication(apiKey.getApplication());
+
+                    request.metrics().setApplication(apiKey.getApplication());
 
                     final String apiName = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
                     if (!apiKey.isRevoked() &&

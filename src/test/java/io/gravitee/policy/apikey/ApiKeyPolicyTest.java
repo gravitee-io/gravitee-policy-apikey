@@ -23,7 +23,7 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.reporter.api.metrics.Metrics;
+import io.gravitee.reporter.api.http.RequestMetrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
-import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_NAME;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -70,14 +69,14 @@ public class ApiKeyPolicyTest {
     protected ExecutionContext executionContext;
 
     @Mock
-    protected Metrics metrics;
+    protected RequestMetrics metrics;
 
     @Before
     public void init() {
         initMocks(this);
 
         apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
-        when(response.metrics()).thenReturn(metrics);
+        when(request.metrics()).thenReturn(metrics);
     }
 
     @Test
