@@ -68,7 +68,6 @@ public class ApiKeyPolicyTest {
     @Mock
     protected ExecutionContext executionContext;
 
-    @Mock
     protected RequestMetrics metrics;
 
     @Before
@@ -76,7 +75,7 @@ public class ApiKeyPolicyTest {
         initMocks(this);
 
         apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
-        when(request.metrics()).thenReturn(metrics);
+        when(request.metrics()).thenReturn(RequestMetrics.on(System.currentTimeMillis()).build());
     }
 
     @Test
