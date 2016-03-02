@@ -68,8 +68,6 @@ public class ApiKeyPolicyTest {
     @Mock
     protected ExecutionContext executionContext;
 
-    protected RequestMetrics metrics;
-
     @Before
     public void init() {
         initMocks(this);
