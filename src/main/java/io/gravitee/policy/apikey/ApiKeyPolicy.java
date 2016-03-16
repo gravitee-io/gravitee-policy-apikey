@@ -100,61 +100,22 @@ public class ApiKeyPolicy {
                         LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
 
                         // The api key is not valid
-                        policyChain.failWith(new PolicyResult() {
-                            @Override
-                            public boolean isFailure() {
-                                return true;
-                            }
-
-                            @Override
-                            public int httpStatusCode() {
-                                return HttpStatusCode.FORBIDDEN_403;
-                            }
-
-                            @Override
-                            public String message() {
-                                return "API Key " + requestApiKey + " is not valid or is expired / revoked.";
-                            }
-                        });
+                        policyChain.failWith(
+                                PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
+                                        "API Key " + requestApiKey + " is not valid or is expired / revoked."));
                     }
                 } else {
                     LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
+
                     // The api key does not exist
-                    policyChain.failWith(new PolicyResult() {
-                        @Override
-                        public boolean isFailure() {
-                            return true;
-                        }
-
-                        @Override
-                        public int httpStatusCode() {
-                            return HttpStatusCode.FORBIDDEN_403;
-                        }
-
-                        @Override
-                        public String message() {
-                            return "API Key " + requestApiKey + " is not valid or is expired / revoked.";
-                        }
-                    });
+                    policyChain.failWith(
+                            PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
+                                    "API Key " + requestApiKey + " is not valid or is expired / revoked."));
                 }
             } catch (TechnicalException te) {
                 LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.failWith(new PolicyResult() {
-                    @Override
-                    public boolean isFailure() {
-                        return true;
-                    }
-
-                    @Override
-                    public int httpStatusCode() {
-                        return HttpStatusCode.INTERNAL_SERVER_ERROR_500;
-                    }
-
-                    @Override
-                    public String message() {
-                        return "An unexpected error occurs while getting API Key from repository";
-                    }
-                });
+                policyChain.failWith(
+                        PolicyResult.failure("An unexpected error occurs while getting API Key from repository"));
             }
         }
     }
