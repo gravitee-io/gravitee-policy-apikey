@@ -22,7 +22,7 @@
 
     <groupId>io.gravitee.policy</groupId>
     <artifactId>gravitee-policy-apikey</artifactId>
-    <version>0.9.0</version>
+    <version>0.10.0-SNAPSHOT</version>
 
     <name>ApiKey Gravitee Policy</name>
     <description>Description of the ApiKey Gravitee Policy</description>
