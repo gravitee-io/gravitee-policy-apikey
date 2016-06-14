@@ -1,7 +1,10 @@
 = API Key Policy
 
-https://github.com/gravitee-io/gravitee-policy-apikey[Source code],
-image:http://build.gravitee.io/jenkins/buildStatus/icon?job=gravitee-policy-apikey["Build status", link="http://build.gravitee.io/jenkins/job/gravitee-policy-apikey/"]
+ifdef::env-github[]
+image:https://img.shields.io/github/watchers/gravitee-io/gravitee-policy-apikey.svg?style=social&maxAge=2592000)["GitHub", link="https://github.com/gravitee-io/gravitee-policy-apikey"]
+image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-apikey/master["Build status", link="https://ci.gravitee.io/job/gravitee-io/job/gravitee-policy-apikey/"]
+image:https://badges.gitter.im/Join Chat.svg["Gitter", link="https://gitter.im/gravitee-io/gravitee-io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+endif::[]
 
 == Scope
 
@@ -15,9 +18,11 @@ image:http://build.gravitee.io/jenkins/buildStatus/icon?job=gravitee-policy-apik
 
 == Description
 
-The ApiKey Gravitee policy lets you enforce verification of API keys at runtime, letting only apps with approved API keys access your APIs.
+API Key policy lets you enforce verification of API keys during request processing, letting only apps with approved API
+keys access your APIs.
 
-This policy ensures that API keys are valid, have not been revoked, and are approved to consume the specific resources associated with your API products.
+This policy ensures that API keys are valid, have not been revoked or expired, and are approved to consume the specific
+resources associated with your API.
 
 == Configuration
 
@@ -26,19 +31,15 @@ You can configure the policy with the following options :
 |===
 |Property |Required |Description |Type |Default
 
-|Todo
-|Todo
-|Todo
-|Todo
-|_todo_
+|propagateApiKey||Propagate API Key to upstream API|boolean|_false_
 
 |===
 
 
 [source, json]
-.Sample
+.Configuration example
 ----
 "api-key": {
-  "todo": true
+  "propagateApiKey": false
 }
 ----
