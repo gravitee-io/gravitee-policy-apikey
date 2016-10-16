@@ -34,7 +34,8 @@ import java.util.Date;
 import java.util.Optional;
 
 /**
- * @author David BRASSELY (brasseld at gmail.com)
+ * @author David BRASSELY (david.brassely at graviteesource.com)
+ * @author GraviteeSource Team
  */
 @SuppressWarnings("unused")
 public class ApiKeyPolicy {
@@ -54,29 +55,14 @@ public class ApiKeyPolicy {
         String requestApiKey = lookForApiKey(request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
-            LOGGER.debug("No API Key has been specified for request {}. Returning 401 status code.", request.id());
-
             // The api key is required
-            policyChain.failWith(new PolicyResult() {
-                @Override
-                public boolean isFailure() {
-                    return true;
-                }
-
-                @Override
-                public int httpStatusCode() {
-                    return HttpStatusCode.UNAUTHORIZED_401;
-                }
-
-                @Override
-                public String message() {
-                    return "No API Key has been specified in headers (" + GraviteeHttpHeader.X_GRAVITEE_API_KEY
-                            + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ").";
-                }
-            });
+            policyChain.failWith(PolicyResult
+                    .failure(HttpStatusCode.UNAUTHORIZED_401,
+                            "No API Key has been specified in headers (" + GraviteeHttpHeader.X_GRAVITEE_API_KEY
+                                    + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
         } else {
             try {
-                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).retrieve(requestApiKey);
+                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findById(requestApiKey);
 
                 // Set API Key in metrics even if the key is not valid, it's just to track calls with by API key
                 request.metrics().setApiKey(requestApiKey);
@@ -84,38 +70,39 @@ public class ApiKeyPolicy {
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
 
+                    // Add data about api-key and subscription into the execution context
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
+                    executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION, apiKey.getSubscription());
+                    executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ExecutionContext.ATTR_API_KEY, apiKey.getKey());
 
+                    request.metrics().setSubscription(apiKey.getSubscription());
+                    request.metrics().setPlan(apiKey.getPlan());
                     request.metrics().setApplication(apiKey.getApplication());
 
                     final String apiName = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
-                    if (!apiKey.isRevoked() &&
-                            (apiKey.getApi().equalsIgnoreCase(apiName)) &&
-                            ((apiKey.getExpiration() == null) || (apiKey.getExpiration().after(Date.from(request.timestamp()))))) {
-                        LOGGER.debug("API Key for request {} has been validated.", request.id());
+//                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
 
+                    if (!apiKey.isRevoked() &&
+                            ((apiKey.getExpireAt() == null) || (apiKey.getExpireAt().after(Date.from(request.timestamp()))))) {// &&
+                            //(optPlan.get().getApis().contains(apiName))) {
                         policyChain.doNext(request, response);
                     } else {
-                        LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
-
                         // The api key is not valid
                         policyChain.failWith(
                                 PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                        "API Key " + requestApiKey + " is not valid or is expired / revoked."));
+                                        "API Key is not valid or is expired / revoked."));
                     }
                 } else {
-                    LOGGER.debug("API Key for request {} is invalid. Returning 403 status code.", request.id());
-
                     // The api key does not exist
                     policyChain.failWith(
                             PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                    "API Key " + requestApiKey + " is not valid or is expired / revoked."));
+                                    "API Key is not valid or is expired / revoked."));
                 }
             } catch (TechnicalException te) {
                 LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
                 policyChain.failWith(
-                        PolicyResult.failure("An unexpected error occurs while getting API Key from repository"));
+                        PolicyResult.failure("API Key is not valid or is expired / revoked."));
             }
         }
     }
@@ -123,19 +110,11 @@ public class ApiKeyPolicy {
     private String lookForApiKey(Request request) {
         // 1_ First, search in HTTP headers
         String apiKey = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+        request.headers().remove(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
 
-        LOGGER.debug("Looking for {} header from request {}", GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
         if (apiKey == null || apiKey.isEmpty()) {
-            LOGGER.debug("No '{}' header value for request {}. Fallback to query param. Returning 401 status code.",
-                    GraviteeHttpHeader.X_GRAVITEE_API_KEY, request.id());
-
             // 2_ If not found, search in query parameters
             apiKey = request.parameters().getOrDefault(API_KEY_QUERY_PARAMETER, null);
-            LOGGER.debug("No '{}' parameter for request {}. Returning empty API Key", API_KEY_QUERY_PARAMETER, request.id());
-        }
-
-        if (! apiKeyPolicyConfiguration.isPropagateApiKey()) {
-            request.headers().remove(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
             request.parameters().remove(API_KEY_QUERY_PARAMETER);
         }
 
