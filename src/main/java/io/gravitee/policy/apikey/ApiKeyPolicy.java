@@ -42,7 +42,9 @@ public class ApiKeyPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyPolicy.class);
 
-    final static String API_KEY_QUERY_PARAMETER = "api-key";
+    static final String API_KEY_QUERY_PARAMETER = "api-key";
+
+    static final String ATTR_API_KEY = ExecutionContext.ATTR_PREFIX + "api-key";
 
     private final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
@@ -72,13 +74,9 @@ public class ApiKeyPolicy {
 
                     // Add data about api-key and subscription into the execution context
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
-                    executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION, apiKey.getSubscription());
+                    executionContext.setAttribute(ExecutionContext.ATTR_USER_ID, apiKey.getSubscription());
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
-                    executionContext.setAttribute(ExecutionContext.ATTR_API_KEY, apiKey.getKey());
-
-                    request.metrics().setSubscription(apiKey.getSubscription());
-                    request.metrics().setPlan(apiKey.getPlan());
-                    request.metrics().setApplication(apiKey.getApplication());
+                    executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
                     final String apiName = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 //                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
