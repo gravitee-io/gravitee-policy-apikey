@@ -26,7 +26,9 @@ import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
+import io.gravitee.repository.management.api.PlanRepository;
 import io.gravitee.repository.management.model.ApiKey;
+import io.gravitee.repository.management.model.Plan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +80,12 @@ public class ApiKeyPolicy {
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
-                    final String apiName = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
-//                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
+                    final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
+                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
 
                     if (!apiKey.isRevoked() &&
-                            ((apiKey.getExpireAt() == null) || (apiKey.getExpireAt().after(Date.from(request.timestamp()))))) {// &&
-                            //(optPlan.get().getApis().contains(apiName))) {
+                            ((apiKey.getExpireAt() == null) || (apiKey.getExpireAt().after(Date.from(request.timestamp())))) &&
+                            (optPlan.get().getApis().contains(apiId))) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
