@@ -26,9 +26,7 @@ import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.api.PlanRepository;
 import io.gravitee.repository.management.model.ApiKey;
-import io.gravitee.repository.management.model.Plan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,15 +75,14 @@ public class ApiKeyPolicy {
                     // Add data about api-key and subscription into the execution context
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
                     executionContext.setAttribute(ExecutionContext.ATTR_USER_ID, apiKey.getSubscription());
+                    // Be sure to force the plan to the one linked to the apikey
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
                     final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
-                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
 
-                    if (!apiKey.isRevoked() &&
-                            ((apiKey.getExpireAt() == null) || (apiKey.getExpireAt().after(Date.from(request.timestamp())))) &&
-                            (optPlan.get().getApis().contains(apiId))) {
+                    if (!apiKey.isRevoked()
+                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(Date.from(request.timestamp())))) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid

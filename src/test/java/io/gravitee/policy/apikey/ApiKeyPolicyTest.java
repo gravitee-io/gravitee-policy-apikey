@@ -26,9 +26,7 @@ import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.reporter.api.http.RequestMetrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.api.PlanRepository;
 import io.gravitee.repository.management.model.ApiKey;
-import io.gravitee.repository.management.model.Plan;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -66,12 +64,6 @@ public class ApiKeyPolicyTest {
     private ApiKeyRepository apiKeyRepository;
 
     @Mock
-    private PlanRepository planRepository;
-
-    @Mock
-    private Plan plan;
-
-    @Mock
     protected Request request;
     @Mock
     protected Response response;
@@ -103,11 +95,8 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -133,11 +122,8 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -164,11 +150,8 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton("bad-api"));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -194,11 +177,8 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -234,11 +214,8 @@ public class ApiKeyPolicyTest {
         when(request.parameters()).thenReturn(parameters);
 
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -264,8 +241,6 @@ public class ApiKeyPolicyTest {
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
         when(apiKeyRepository.findById(notExistingApiKey)).thenReturn(Optional.empty());
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -287,11 +262,8 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -314,11 +286,8 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -343,11 +312,8 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getComponent(PlanRepository.class)).thenReturn(planRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-        when(plan.getApis()).thenReturn(Collections.singleton(API_NAME_HEADER_VALUE));
-        when(planRepository.findById(PLAN_NAME_HEADER_VALUE)).thenReturn(Optional.of(plan));
 
         when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
