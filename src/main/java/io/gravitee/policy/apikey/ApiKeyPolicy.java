@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -81,11 +82,11 @@ public class ApiKeyPolicy {
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
                     final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
-                    Optional<Plan> optPlan = executionContext.getComponent(PlanRepository.class).findById(apiKey.getPlan());
+                    Set<String> planApis = (Set<String>) executionContext.getAttribute(ExecutionContext.ATTR_PLAN + "-apis");
 
-                    if (!apiKey.isRevoked() &&
-                            ((apiKey.getExpireAt() == null) || (apiKey.getExpireAt().after(Date.from(request.timestamp())))) &&
-                            (optPlan.get().getApis().contains(apiId))) {
+                    if (!apiKey.isRevoked()
+                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(Date.from(request.timestamp())))
+                            && (planApis == null || planApis.contains(apiId))) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
