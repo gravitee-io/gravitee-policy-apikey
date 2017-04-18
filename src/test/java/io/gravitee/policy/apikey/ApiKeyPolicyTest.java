@@ -34,10 +34,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.springframework.core.env.Environment;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static org.mockito.Mockito.*;
@@ -64,20 +68,27 @@ public class ApiKeyPolicyTest {
     private ApiKeyRepository apiKeyRepository;
 
     @Mock
-    protected Request request;
+    private Request request;
     @Mock
-    protected Response response;
+    private Response response;
     @Mock
-    protected PolicyChain policyChain;
+    private PolicyChain policyChain;
     @Mock
-    protected ExecutionContext executionContext;
+    private ExecutionContext executionContext;
+    @Mock
+    private Environment environment;
 
     @Before
     public void init() {
         initMocks(this);
 
         apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
+        ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
+        ApiKeyPolicy.API_KEY_HEADER = null;
         when(request.metrics()).thenReturn(RequestMetrics.on(System.currentTimeMillis()).build());
+        when(executionContext.getComponent(Environment.class)).thenReturn(environment);
+        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenAnswer(invocation -> invocation.getArguments()[1]);
+        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenAnswer(invocation -> invocation.getArguments()[1]);
     }
 
     @Test
@@ -121,6 +132,63 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
+        when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+
+        verify(apiKeyRepository).findById(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
+    }
+
+    @Test
+    public void testOnRequest_withCustomHeader() throws TechnicalException {
+        final String customHeader = "My-Custom-Api-Key";
+        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenReturn(customHeader);
+
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(customHeader, API_KEY_HEADER_VALUE);
+            }
+        });
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setExpireAt(new Date());
+        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+
+        Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
+
+        when(request.headers()).thenReturn(headers);
+        when(request.timestamp()).thenReturn(requestDate);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
+        when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+
+        verify(apiKeyRepository).findById(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
+    }
+
+    @Test
+    public void testOnRequest_withCustomQueryParameter() throws TechnicalException {
+        final String customQueryParameter = "my-api-key";
+        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenReturn(customQueryParameter);
+
+        final HttpHeaders headers = new HttpHeaders();
+
+        final Map<String, String> parameters = new HashMap<>();
+        parameters.put(customQueryParameter, API_KEY_HEADER_VALUE);
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(request.parameters()).thenReturn(parameters);
+
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
@@ -204,7 +272,7 @@ public class ApiKeyPolicyTest {
         final HttpHeaders headers = new HttpHeaders();
 
         final Map<String, String> parameters = new HashMap<>();
-        parameters.put(ApiKeyPolicy.API_KEY_QUERY_PARAMETER, API_KEY_HEADER_VALUE);
+        parameters.put(ApiKeyPolicy.DEFAULT_API_KEY_QUERY_PARAMETER, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);

@@ -7,11 +7,13 @@ endif::[]
 
 == Phase
 
+[cols="2*", options="header"]
 |===
-|onRequest |onResponse
+^|onRequest
+^|onResponse
 
-|X
-|
+^.^| X
+^.^|
 
 |===
 
@@ -25,20 +27,38 @@ resources associated with your API.
 
 == Configuration
 
+=== Policy level
 You can configure the policy with the following options :
 
 |===
 |Property |Required |Description |Type |Default
 
-|propagateApiKey||Propagate API Key to upstream API|boolean|_false_
+.^|propagateApiKey
+^.^|-
+|Propagate API Key to upstream API
+^.^|boolean
+^.^|_false_
 
 |===
 
 
 [source, json]
-.Configuration example
+.Configuration
 ----
 "api-key": {
   "propagateApiKey": false
 }
+----
+
+=== Gateway level
+It is also possible to customize the `X-Gravitee-Api-Key` header or `api-key` query parameter.
+This can be done from gateway configuration file (`gravitee.yml`):
+
+[source, yaml]
+.Configuration
+----
+policy:
+  api-key:
+    header: My-Custom-Api-Key
+    param: custom-api-key
 ----
