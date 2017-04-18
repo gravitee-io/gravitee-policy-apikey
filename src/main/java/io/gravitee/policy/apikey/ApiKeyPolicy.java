@@ -29,6 +29,7 @@ import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 
 import java.util.Date;
 import java.util.Optional;
@@ -42,11 +43,18 @@ public class ApiKeyPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyPolicy.class);
 
-    static final String API_KEY_QUERY_PARAMETER = "api-key";
-
     static final String ATTR_API_KEY = ExecutionContext.ATTR_PREFIX + "api-key";
 
+    /**
+     * Policy configuration
+     */
     private final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
+
+    static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
+    static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
+    static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
+    static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
+    static final String DEFAULT_API_KEY_HEADER_PARAMETER = GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 
     public ApiKeyPolicy(ApiKeyPolicyConfiguration apiKeyPolicyConfiguration) {
         this.apiKeyPolicyConfiguration = apiKeyPolicyConfiguration;
@@ -54,13 +62,13 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        String requestApiKey = lookForApiKey(request);
+        String requestApiKey = lookForApiKey(executionContext, request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
             policyChain.failWith(PolicyResult
                     .failure(HttpStatusCode.UNAUTHORIZED_401,
-                            "No API Key has been specified in headers (" + GraviteeHttpHeader.X_GRAVITEE_API_KEY
+                            "No API Key has been specified in headers (" + API_KEY_HEADER
                                     + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
         } else {
             try {
@@ -104,10 +112,16 @@ public class ApiKeyPolicy {
         }
     }
 
-    private String lookForApiKey(Request request) {
+    private String lookForApiKey(ExecutionContext executionContext, Request request) {
+        if (API_KEY_HEADER == null) {
+            Environment environment = executionContext.getComponent(Environment.class);
+            API_KEY_HEADER = environment.getProperty(API_KEY_HEADER_PROPERTY, DEFAULT_API_KEY_HEADER_PARAMETER);
+            API_KEY_QUERY_PARAMETER = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
+        }
+
         // 1_ First, search in HTTP headers
-        String apiKey = request.headers().getFirst(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
-        request.headers().remove(GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+        String apiKey = request.headers().getFirst(API_KEY_HEADER);
+        request.headers().remove(API_KEY_HEADER);
 
         if (apiKey == null || apiKey.isEmpty()) {
             // 2_ If not found, search in query parameters
