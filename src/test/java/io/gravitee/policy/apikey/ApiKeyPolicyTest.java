@@ -17,6 +17,8 @@ package io.gravitee.policy.apikey;
 
 
 import io.gravitee.common.http.HttpHeaders;
+import io.gravitee.common.util.LinkedMultiValueMap;
+import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
@@ -38,10 +40,7 @@ import org.springframework.core.env.Environment;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static org.mockito.Mockito.*;
@@ -179,8 +178,8 @@ public class ApiKeyPolicyTest {
 
         final HttpHeaders headers = new HttpHeaders();
 
-        final Map<String, String> parameters = new HashMap<>();
-        parameters.put(customQueryParameter, API_KEY_HEADER_VALUE);
+        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+        parameters.put(customQueryParameter, Collections.singletonList(API_KEY_HEADER_VALUE));
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -260,6 +259,7 @@ public class ApiKeyPolicyTest {
         final HttpHeaders headers = new HttpHeaders();
 
         when(request.headers()).thenReturn(headers);
+        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -271,8 +271,8 @@ public class ApiKeyPolicyTest {
     public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
         final HttpHeaders headers = new HttpHeaders();
 
-        final Map<String, String> parameters = new HashMap<>();
-        parameters.put(ApiKeyPolicy.DEFAULT_API_KEY_QUERY_PARAMETER, API_KEY_HEADER_VALUE);
+        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+        parameters.put(ApiKeyPolicy.DEFAULT_API_KEY_QUERY_PARAMETER, Collections.singletonList(API_KEY_HEADER_VALUE));
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);

@@ -125,7 +125,7 @@ public class ApiKeyPolicy {
 
         if (apiKey == null || apiKey.isEmpty()) {
             // 2_ If not found, search in query parameters
-            apiKey = request.parameters().getOrDefault(API_KEY_QUERY_PARAMETER, null);
+            apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
             request.parameters().remove(API_KEY_QUERY_PARAMETER);
         }
 
