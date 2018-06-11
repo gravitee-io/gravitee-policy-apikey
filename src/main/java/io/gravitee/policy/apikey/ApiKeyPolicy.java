@@ -29,7 +29,7 @@ import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.Date;
 import java.util.Optional;
@@ -114,7 +114,7 @@ public class ApiKeyPolicy {
 
     private String lookForApiKey(ExecutionContext executionContext, Request request) {
         if (API_KEY_HEADER == null) {
-            Environment environment = executionContext.getComponent(Environment.class);
+            final ConfigurableEnvironment environment = executionContext.getComponent(ConfigurableEnvironment.class);
             API_KEY_HEADER = environment.getProperty(API_KEY_HEADER_PROPERTY, DEFAULT_API_KEY_HEADER_PARAMETER);
             API_KEY_QUERY_PARAMETER = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
         }
