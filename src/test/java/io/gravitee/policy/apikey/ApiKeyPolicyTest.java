@@ -368,7 +368,6 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    @Ignore
     public void testApiKey_propagated() throws TechnicalException{
         final HttpHeaders headers = new HttpHeaders();
         headers.setAll(new HashMap<String, String>() {
