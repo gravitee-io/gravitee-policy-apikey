@@ -121,7 +121,7 @@ public class ApiKeyPolicy {
 
         // 1_ First, search in HTTP headers
         String apiKey = request.headers().getFirst(API_KEY_HEADER);
-        if (! apiKeyPolicyConfiguration.isPropagateApiKey()) {
+        if (apiKeyPolicyConfiguration != null && ! apiKeyPolicyConfiguration.isPropagateApiKey()) {
             request.headers().remove(API_KEY_HEADER);
         }
 
@@ -129,7 +129,7 @@ public class ApiKeyPolicy {
             // 2_ If not found, search in query parameters
             apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
 
-            if (! apiKeyPolicyConfiguration.isPropagateApiKey()) {
+            if (apiKeyPolicyConfiguration != null && ! apiKeyPolicyConfiguration.isPropagateApiKey()) {
                 request.parameters().remove(API_KEY_QUERY_PARAMETER);
             }
         }
