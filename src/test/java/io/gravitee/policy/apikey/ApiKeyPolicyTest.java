@@ -118,6 +118,33 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
+    public void test_withNullConfiguration() throws TechnicalException {
+
+        apiKeyPolicy = new ApiKeyPolicy(null);
+
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+            }
+        });
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
+        when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+
+        verify(apiKeyRepository).findById(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
+    }
+
+    @Test
     public void testOnRequest_withUnexpiredKey() throws TechnicalException {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAll(new HashMap<String, String>() {
