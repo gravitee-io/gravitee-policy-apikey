@@ -370,7 +370,32 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testApiKey_notPropagated() throws TechnicalException{
+    public void testApiKey_notPropagatedBecauseNoConfig() throws TechnicalException{
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+            }
+        });
+
+        final ApiKey validApiKey = new ApiKey();
+        validApiKey.setRevoked(false);
+        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+
+        when(request.headers()).thenReturn(headers);
+        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
+        when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+
+        (new ApiKeyPolicy(null)).onRequest(request, response, executionContext, policyChain);
+
+        Assert.assertFalse(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        verify(apiKeyRepository).findById(API_KEY_HEADER_VALUE);
+        verify(policyChain).doNext(request, response);
+    }
+
+    @Test
+    public void testApiKey_notPropagatedBeacauseItsAsked() throws TechnicalException{
         final HttpHeaders headers = new HttpHeaders();
         headers.setAll(new HashMap<String, String>() {
             {
