@@ -17,6 +17,7 @@ package io.gravitee.policy.apikey;
 
 
 import io.gravitee.common.http.HttpHeaders;
+import io.gravitee.common.http.MediaType;
 import io.gravitee.common.util.LinkedMultiValueMap;
 import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.ExecutionContext;
@@ -25,6 +26,7 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.configuration.ErrorType;
 import io.gravitee.reporter.api.http.Metrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
@@ -443,5 +445,87 @@ public class ApiKeyPolicyTest {
         Assert.assertTrue(request.headers().containsKey(X_GRAVITEE_API_KEY));
         verify(apiKeyRepository).findById(API_KEY_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
+    }
+
+    /**
+     * test case for a configured response where the request matches a configured response.
+     *
+     * @throws TechnicalException
+     * @since 1.6.3
+     */
+    @Test
+    public void testResponseConfiguration() throws TechnicalException {
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+
+            {
+                this.put(X_GRAVITEE_API_KEY, ApiKeyPolicyTest.API_KEY_HEADER_VALUE);
+                this.put("Accept", MediaType.APPLICATION_JSON);
+            }
+        });
+
+        final ApiKey invalidApiKey = new ApiKey();
+        invalidApiKey.setRevoked(true);
+        invalidApiKey.setPlan(ApiKeyPolicyTest.PLAN_NAME_HEADER_VALUE);
+
+        when(this.request.headers()).thenReturn(headers);
+        when(this.executionContext.getComponent(ApiKeyRepository.class)).thenReturn(this.apiKeyRepository);
+        when(this.executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(ApiKeyPolicyTest.API_NAME_HEADER_VALUE);
+        when(this.apiKeyRepository.findById(ApiKeyPolicyTest.API_KEY_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
+
+        when(this.apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
+        final io.gravitee.policy.apikey.configuration.Response responseConfig = new io.gravitee.policy.apikey.configuration.Response();
+        responseConfig.setContentType(MediaType.APPLICATION_JSON);
+        responseConfig.setType(ErrorType.WRONG_EXPIRED_REVOKED);
+        responseConfig.setStatusCode(499);
+        responseConfig.setContent("{\"error\":\"not allowed\"}");
+        when(this.apiKeyPolicyConfiguration.getResponses()).thenReturn(Collections.singletonList(responseConfig));
+        this.apiKeyPolicy.onRequest(this.request, this.response, this.executionContext, this.policyChain);
+
+        verify(this.apiKeyRepository).findById(ApiKeyPolicyTest.API_KEY_HEADER_VALUE);
+        verify(this.policyChain, times(0)).doNext(this.request, this.response);
+        verify(this.policyChain).failWith(any(PolicyResult.class));
+        // TODO check the content of the PolicyResult Assert.assertEquals(499, any.httpStatusCode());
+    }
+
+    /**
+     * test case for a configured response where the request do not match a configured response.
+     *
+     * @throws TechnicalException
+     * @since 1.6.3
+     */
+    @Test
+    public void testResponseConfigurationNoMatch() throws TechnicalException {
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+
+            {
+                this.put(X_GRAVITEE_API_KEY, ApiKeyPolicyTest.API_KEY_HEADER_VALUE);
+                this.put("Accept", MediaType.APPLICATION_JSON);
+            }
+        });
+
+        final ApiKey invalidApiKey = new ApiKey();
+        invalidApiKey.setRevoked(true);
+        invalidApiKey.setPlan(ApiKeyPolicyTest.PLAN_NAME_HEADER_VALUE);
+
+        when(this.request.headers()).thenReturn(headers);
+        when(this.executionContext.getComponent(ApiKeyRepository.class)).thenReturn(this.apiKeyRepository);
+        when(this.executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(ApiKeyPolicyTest.API_NAME_HEADER_VALUE);
+        when(this.apiKeyRepository.findById(ApiKeyPolicyTest.API_KEY_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
+
+        when(this.apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
+        final io.gravitee.policy.apikey.configuration.Response responseConfig = new io.gravitee.policy.apikey.configuration.Response();
+        responseConfig.setContentType(MediaType.APPLICATION_JSON);
+        responseConfig.setType(ErrorType.MISSING);
+        responseConfig.setStatusCode(499);
+        responseConfig.setContent("{\"error\":\"not allowed\"}");
+        when(this.apiKeyPolicyConfiguration.getResponses()).thenReturn(Collections.singletonList(responseConfig));
+        this.apiKeyPolicy.onRequest(this.request, this.response, this.executionContext, this.policyChain);
+
+        verify(this.apiKeyRepository).findById(ApiKeyPolicyTest.API_KEY_HEADER_VALUE);
+        verify(this.policyChain, times(0)).doNext(this.request, this.response);
+        verify(this.policyChain).failWith(any(PolicyResult.class));
+        // TODO check the content of the PolicyResult Assert.assertEquals(401, any.httpStatusCode());
     }
 }

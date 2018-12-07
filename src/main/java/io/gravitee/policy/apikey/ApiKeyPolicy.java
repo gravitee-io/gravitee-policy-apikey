@@ -24,6 +24,7 @@ import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.configuration.ErrorType;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -62,17 +63,15 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+        final String accept = request.headers().getFirst("Accept");
         String requestApiKey = lookForApiKey(executionContext, request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
-            policyChain.failWith(PolicyResult
-                    .failure(HttpStatusCode.UNAUTHORIZED_401,
-                            "No API Key has been specified in headers (" + API_KEY_HEADER
-                                    + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
+            policyChain.failWith(this.getPolicyResult(accept, ErrorType.MISSING));
         } else {
             try {
-                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findById(requestApiKey);
+                final Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findById(requestApiKey);
 
                 // Set API Key in metrics even if the key is not valid, it's just to track calls with by API key
                 request.metrics().setApiKey(requestApiKey);
@@ -94,20 +93,15 @@ public class ApiKeyPolicy {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
-                        policyChain.failWith(
-                                PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                        "API Key is not valid or is expired / revoked."));
+                        policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
                     }
                 } else {
                     // The api key does not exist
-                    policyChain.failWith(
-                            PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                    "API Key is not valid or is expired / revoked."));
+                    policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
                 }
-            } catch (TechnicalException te) {
-                LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.failWith(
-                        PolicyResult.failure("API Key is not valid or is expired / revoked."));
+            } catch (final TechnicalException te) {
+                ApiKeyPolicy.LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
+                policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
             }
         }
     }
@@ -135,5 +129,38 @@ public class ApiKeyPolicy {
         }
 
         return apiKey;
+    }
+
+    /**
+     * @param accept
+     *        content of the <code>Accept</code> header param, may ne <code>null</code>.
+     * @param errorType
+     *        the {@link ErrorType} to create an {@link PolicyResult} for, not <code>null</code>.
+     * @return
+     * @since 1.6.3
+     */
+    private PolicyResult getPolicyResult(final String accept, final ErrorType errorType) {
+        if (this.apiKeyPolicyConfiguration.getResponses() != null) {
+            final Optional<io.gravitee.policy.apikey.configuration.Response> optionalResponse =
+                    this.apiKeyPolicyConfiguration.getResponses().stream().filter(
+                            response -> response.getContentType().equalsIgnoreCase(accept) && response.getType().equals(errorType)).findFirst();
+            if (optionalResponse.isPresent()) {
+                final io.gravitee.policy.apikey.configuration.Response response = optionalResponse.get();
+                return PolicyResult.failure(response.getStatusCode(), response.getContent(), accept);
+            }
+        }
+
+        // no matching response found, using defaults for backward compatibility:
+        switch (errorType) {
+            case MISSING:
+                return PolicyResult.failure(
+                        HttpStatusCode.UNAUTHORIZED_401,
+                        "No API Key has been specified in headers (" + ApiKeyPolicy.API_KEY_HEADER + ") or query parameters ("
+                                + ApiKeyPolicy.API_KEY_QUERY_PARAMETER + ").");
+            case WRONG_EXPIRED_REVOKED:
+                //$FALL-THROUGH$
+            default:
+                return PolicyResult.failure(HttpStatusCode.FORBIDDEN_403, "API Key is not valid or is expired / revoked.");
+        }
     }
 }
