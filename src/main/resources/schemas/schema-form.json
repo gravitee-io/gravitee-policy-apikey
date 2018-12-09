@@ -22,14 +22,14 @@
           },
           "type" : {
             "title": "the type of error to respond to",
-            "description": "the type of error (support EL).",
+            "description": "the type of error.",
             "type" : "string",
             "default": "MISSING",
       		"enum" : [ "MISSING", "WRONG_EXPIRED_REVOKED" ]
           },
           "statusCode": {
             "title": "HTTP status code",
-            "description": "The HTTP status code to return (support EL).",
+            "description": "The HTTP status code to return.",
             "type" : "integer"
           },
           "content" : {
