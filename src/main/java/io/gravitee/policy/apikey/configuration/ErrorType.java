@@ -25,7 +25,7 @@ package io.gravitee.policy.apikey.configuration;
 public enum ErrorType {
 
     /**
-     * no API key was send.
+     * no API key was given.
      *
      * @since 1.6.3
      */

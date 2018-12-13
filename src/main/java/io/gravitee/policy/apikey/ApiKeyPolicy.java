@@ -132,11 +132,15 @@ public class ApiKeyPolicy {
     }
 
     /**
+     * determine the {@link PolicyResult} to be send back. The given <code>Accept</code> header value and {@link ErrorType error type} is used
+     * to find a matching {@link io.gravitee.policy.apikey.configuration.Response response} configuration. If not found the default and backward
+     * compatible {@link PolicyResult} is used.
+     *
      * @param accept
      *        content of the <code>Accept</code> header param, may ne <code>null</code>.
      * @param errorType
      *        the {@link ErrorType} to create an {@link PolicyResult} for, not <code>null</code>.
-     * @return
+     * @return a {@link PolicyResult} for the given <code>Accept</code> header value and {@link ErrorType error type}, not <code>null</code>.
      * @since 1.6.3
      */
     private PolicyResult getPolicyResult(final String accept, final ErrorType errorType) {

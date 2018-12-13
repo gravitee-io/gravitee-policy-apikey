@@ -16,7 +16,7 @@
 package io.gravitee.policy.apikey.configuration;
 
 /**
- * a configured {@link Response}.<br/>
+ * a {@link Response} to a failed API key policy check. The {@link Response} can be configured for different content types and {@link ErrorType error types}.<br/>
  * created 06.12.2018
  *
  * @author Oliver Kelling, https://github.com/k-oliver
@@ -30,7 +30,7 @@ public class Response {
     private String content;
 
     /**
-     * @return the contentType
+     * @return the content type to be matched by the <code>Accept</code> header.
      * @since 1.6.3
      */
     public String getContentType() {
@@ -39,7 +39,7 @@ public class Response {
 
     /**
      * @param contentType
-     *        the contentType to set
+     *        the content type to be matched by the <code>Accept</code> header.
      * @since 1.6.3
      */
     public void setContentType(final String contentType) {
@@ -47,7 +47,7 @@ public class Response {
     }
 
     /**
-     * @return the type
+     * @return the type of error.
      * @since 1.6.3
      */
     public ErrorType getType() {
@@ -56,7 +56,7 @@ public class Response {
 
     /**
      * @param type
-     *        the type to set
+     *        the type of erro to set.
      * @since 1.6.3
      */
     public void setType(final ErrorType type) {
@@ -64,7 +64,7 @@ public class Response {
     }
 
     /**
-     * @return the statusCode
+     * @return the HTTP status code to be send.
      * @since 1.6.3
      */
     public Integer getStatusCode() {
@@ -73,7 +73,7 @@ public class Response {
 
     /**
      * @param statusCode
-     *        the statusCode to set
+     *       the HTTP status code to be send.
      * @since 1.6.3
      */
     public void setStatusCode(final Integer statusCode) {
@@ -81,7 +81,7 @@ public class Response {
     }
 
     /**
-     * @return the content
+     * @return the content to be send matching the {@link #getContentType()}.
      * @since 1.6.3
      */
     public String getContent() {
@@ -90,7 +90,7 @@ public class Response {
 
     /**
      * @param content
-     *        the content to set
+     *        the content to be send matching the {@link #setContentType(String)}.
      * @since 1.6.3
      */
     public void setContent(final String content) {
