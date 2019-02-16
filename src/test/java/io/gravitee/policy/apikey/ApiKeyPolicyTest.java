@@ -160,7 +160,7 @@ public class ApiKeyPolicyTest {
         Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
 
         when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate);
+        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
@@ -190,7 +190,7 @@ public class ApiKeyPolicyTest {
         Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
 
         when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate);
+        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
@@ -245,7 +245,7 @@ public class ApiKeyPolicyTest {
         Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
 
         when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate);
+        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
@@ -272,7 +272,7 @@ public class ApiKeyPolicyTest {
         Instant requestDate = validApiKey.getExpireAt().toInstant().plus(Duration.ofHours(1));
 
         when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate);
+        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
         when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
