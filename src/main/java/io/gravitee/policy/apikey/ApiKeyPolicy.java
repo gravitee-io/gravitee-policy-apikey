@@ -89,7 +89,7 @@ public class ApiKeyPolicy {
                     final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
                     if (!apiKey.isRevoked()
-                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(Date.from(request.timestamp())))) {
+                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
