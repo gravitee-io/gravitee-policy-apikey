@@ -37,7 +37,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.core.env.Environment;
 
 import java.time.Duration;
@@ -338,8 +338,6 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findById(API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
         when(apiKeyRepository.findById(notExistingApiKey)).thenReturn(Optional.empty());
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);

@@ -81,7 +81,7 @@ public class ApiKeyPolicy {
 
                     // Add data about api-key and subscription into the execution context
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
-                    executionContext.setAttribute(ExecutionContext.ATTR_USER_ID, apiKey.getSubscription());
+                    executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
                     // Be sure to force the plan to the one linked to the apikey
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
