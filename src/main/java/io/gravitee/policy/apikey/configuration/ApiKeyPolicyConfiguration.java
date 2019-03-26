@@ -15,6 +15,7 @@
  */
 package io.gravitee.policy.apikey.configuration;
 
+import java.util.List;
 import io.gravitee.policy.api.PolicyConfiguration;
 
 /**
@@ -25,11 +26,30 @@ public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     private boolean propagateApiKey = false;
 
+    private List<Response> responses;
+
     public boolean isPropagateApiKey() {
         return propagateApiKey;
     }
 
     public void setPropagateApiKey(boolean propagateApiKey) {
         this.propagateApiKey = propagateApiKey;
+    }
+
+    /**
+     * @return the list of configured responses, may be <code>null</code>.
+     * @since 1.6.3
+     */
+    public List<Response> getResponses() {
+        return this.responses;
+    }
+
+    /**
+     * @param responses
+     *        the responses to set
+     * @since 1.6.3
+     */
+    public void setResponses(final List<Response> responses) {
+        this.responses = responses;
     }
 }

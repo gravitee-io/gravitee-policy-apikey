@@ -5,6 +5,46 @@
     "propagateApiKey" : {
       "title": "Propagate API Key to upstream API",
       "type" : "boolean"
+    },
+    "responses" : {
+      "title": "User defined response by content type and error type",
+      "description": "An optional list of responses to be send back to the client if the API key check failed",
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "title": "Response",
+        "id" : "urn:jsonschema:io:gravitee:policy:apikey:configuration:Response",
+        "properties" : {
+          "contentType" : {
+            "title": "Content-Type",
+            "description": "The content type send as Accept header (support EL).",
+            "type" : "string"
+          },
+          "type" : {
+            "title": "the type of error to respond to",
+            "description": "the type of error.",
+            "type" : "string",
+            "default": "MISSING",
+      		"enum" : [ "MISSING", "WRONG_EXPIRED_REVOKED" ]
+          },
+          "statusCode": {
+            "title": "HTTP status code",
+            "description": "The HTTP status code to return.",
+            "type" : "integer"
+          },
+          "content" : {
+            "title": "Content",
+            "description": "The content to send back. The content should match the content type (support EL).",
+            "type" : "string"
+          }
+        },
+        "required": [
+          "contentType",
+          "type",
+          "statusCode",
+          "content"
+        ]
+      }
     }
   }
 }

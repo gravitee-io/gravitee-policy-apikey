@@ -24,6 +24,7 @@ import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.configuration.ErrorType;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -62,14 +63,12 @@ public class ApiKeyPolicy {
 
     @OnRequest
     public void onRequest(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
+        final String accept = request.headers().getFirst("Accept");
         String requestApiKey = lookForApiKey(executionContext, request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
-            policyChain.failWith(PolicyResult
-                    .failure(HttpStatusCode.UNAUTHORIZED_401,
-                            "No API Key has been specified in headers (" + API_KEY_HEADER
-                                    + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
+            policyChain.failWith(this.getPolicyResult(accept, ErrorType.MISSING));
         } else {
             try {
                 Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findById(requestApiKey);
@@ -82,7 +81,7 @@ public class ApiKeyPolicy {
 
                     // Add data about api-key and subscription into the execution context
                     executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
-                    executionContext.setAttribute(ExecutionContext.ATTR_USER_ID, apiKey.getSubscription());
+                    executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
                     // Be sure to force the plan to the one linked to the apikey
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
@@ -90,24 +89,19 @@ public class ApiKeyPolicy {
                     final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
                     if (!apiKey.isRevoked()
-                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(Date.from(request.timestamp())))) {
+                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
-                        policyChain.failWith(
-                                PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                        "API Key is not valid or is expired / revoked."));
+                        policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
                     }
                 } else {
                     // The api key does not exist
-                    policyChain.failWith(
-                            PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
-                                    "API Key is not valid or is expired / revoked."));
+                    policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
                 }
-            } catch (TechnicalException te) {
-                LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.failWith(
-                        PolicyResult.failure("API Key is not valid or is expired / revoked."));
+            } catch (final TechnicalException te) {
+                ApiKeyPolicy.LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
+                policyChain.failWith(this.getPolicyResult(accept, ErrorType.WRONG_EXPIRED_REVOKED));
             }
         }
     }
@@ -135,5 +129,42 @@ public class ApiKeyPolicy {
         }
 
         return apiKey;
+    }
+
+    /**
+     * determine the {@link PolicyResult} to be send back. The given <code>Accept</code> header value and {@link ErrorType error type} is used
+     * to find a matching {@link io.gravitee.policy.apikey.configuration.Response response} configuration. If not found the default and backward
+     * compatible {@link PolicyResult} is used.
+     *
+     * @param accept
+     *        content of the <code>Accept</code> header param, may ne <code>null</code>.
+     * @param errorType
+     *        the {@link ErrorType} to create an {@link PolicyResult} for, not <code>null</code>.
+     * @return a {@link PolicyResult} for the given <code>Accept</code> header value and {@link ErrorType error type}, not <code>null</code>.
+     * @since 1.6.3
+     */
+    private PolicyResult getPolicyResult(final String accept, final ErrorType errorType) {
+        if (this.apiKeyPolicyConfiguration.getResponses() != null) {
+            final Optional<io.gravitee.policy.apikey.configuration.Response> optionalResponse =
+                    this.apiKeyPolicyConfiguration.getResponses().stream().filter(
+                            response -> response.getContentType().equalsIgnoreCase(accept) && response.getType().equals(errorType)).findFirst();
+            if (optionalResponse.isPresent()) {
+                final io.gravitee.policy.apikey.configuration.Response response = optionalResponse.get();
+                return PolicyResult.failure(response.getStatusCode(), response.getContent(), accept);
+            }
+        }
+
+        // no matching response found, using defaults for backward compatibility:
+        switch (errorType) {
+            case MISSING:
+                return PolicyResult.failure(
+                        HttpStatusCode.UNAUTHORIZED_401,
+                        "No API Key has been specified in headers (" + ApiKeyPolicy.API_KEY_HEADER + ") or query parameters ("
+                                + ApiKeyPolicy.API_KEY_QUERY_PARAMETER + ").");
+            case WRONG_EXPIRED_REVOKED:
+                //$FALL-THROUGH$
+            default:
+                return PolicyResult.failure(HttpStatusCode.FORBIDDEN_403, "API Key is not valid or is expired / revoked.");
+        }
     }
 }
