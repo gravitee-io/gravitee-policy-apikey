@@ -45,6 +45,9 @@ public class ApiKeyPolicy {
 
     static final String ATTR_API_KEY = ExecutionContext.ATTR_PREFIX + "api-key";
 
+    private static final String API_KEY_MISSING_KEY = "API_KEY_MISSING";
+    private static final String API_KEY_INVALID_KEY = "API_KEY_INVALID";
+
     /**
      * Policy configuration
      */
@@ -67,7 +70,9 @@ public class ApiKeyPolicy {
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
             policyChain.failWith(PolicyResult
-                    .failure(HttpStatusCode.UNAUTHORIZED_401,
+                    .failure(
+                            API_KEY_MISSING_KEY,
+                            HttpStatusCode.UNAUTHORIZED_401,
                             "No API Key has been specified in headers (" + API_KEY_HEADER
                                     + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
         } else {
@@ -95,19 +100,25 @@ public class ApiKeyPolicy {
                     } else {
                         // The api key is not valid
                         policyChain.failWith(
-                                PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
+                                PolicyResult.failure(
+                                        API_KEY_INVALID_KEY,
+                                        HttpStatusCode.FORBIDDEN_403,
                                         "API Key is not valid or is expired / revoked."));
                     }
                 } else {
                     // The api key does not exist
                     policyChain.failWith(
-                            PolicyResult.failure(HttpStatusCode.FORBIDDEN_403,
+                            PolicyResult.failure(
+                                    API_KEY_INVALID_KEY,
+                                    HttpStatusCode.FORBIDDEN_403,
                                     "API Key is not valid or is expired / revoked."));
                 }
             } catch (TechnicalException te) {
                 LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
                 policyChain.failWith(
-                        PolicyResult.failure("API Key is not valid or is expired / revoked."));
+                        PolicyResult.failure(
+                                API_KEY_INVALID_KEY,
+                                "API Key is not valid or is expired / revoked."));
             }
         }
     }
