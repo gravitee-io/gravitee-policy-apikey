@@ -25,7 +25,6 @@ import io.gravitee.gateway.api.Response;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.reporter.api.http.Metrics;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
@@ -87,7 +86,6 @@ public class ApiKeyPolicyTest {
         apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
         ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
         ApiKeyPolicy.API_KEY_HEADER = null;
-        when(request.metrics()).thenReturn(Metrics.on(System.currentTimeMillis()).build());
         when(executionContext.getComponent(Environment.class)).thenReturn(environment);
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenAnswer(invocation -> invocation.getArguments()[1]);
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenAnswer(invocation -> invocation.getArguments()[1]);
