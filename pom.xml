@@ -22,7 +22,7 @@
 
     <groupId>io.gravitee.policy</groupId>
     <artifactId>gravitee-policy-apikey</artifactId>
-    <version>1.8.0-SNAPSHOT</version>
+    <version>1.8.0</version>
 
     <name>Gravitee.io APIM - Policy - ApiKey</name>
     <description>Description of the ApiKey Gravitee Policy</description>
@@ -34,9 +34,9 @@
     </parent>
 
     <properties>
-        <gravitee-gateway-api.version>1.15.0-SNAPSHOT</gravitee-gateway-api.version>
-        <gravitee-policy-api.version>1.5.0-SNAPSHOT</gravitee-policy-api.version>
-        <gravitee-repository-api.version>1.24.0</gravitee-repository-api.version>
+        <gravitee-gateway-api.version>1.15.0</gravitee-gateway-api.version>
+        <gravitee-policy-api.version>1.5.0</gravitee-policy-api.version>
+        <gravitee-repository-api.version>1.25.0</gravitee-repository-api.version>
 
         <json-schema-generator-maven-plugin.version>1.1.0</json-schema-generator-maven-plugin.version>
         <json-schema-generator-maven-plugin.outputDirectory>${project.build.directory}/schemas</json-schema-generator-maven-plugin.outputDirectory>
