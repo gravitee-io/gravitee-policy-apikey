@@ -98,7 +98,7 @@ public class ApiKeyPolicy {
                         policyChain.failWith(
                                 PolicyResult.failure(
                                         API_KEY_INVALID_KEY,
-                                        HttpStatusCode.FORBIDDEN_403,
+                                        HttpStatusCode.UNAUTHORIZED_401,
                                         "API Key is not valid or is expired / revoked."));
                     }
                 } else {
@@ -106,7 +106,7 @@ public class ApiKeyPolicy {
                     policyChain.failWith(
                             PolicyResult.failure(
                                     API_KEY_INVALID_KEY,
-                                    HttpStatusCode.FORBIDDEN_403,
+                                    HttpStatusCode.UNAUTHORIZED_401,
                                     "API Key is not valid or is expired / revoked."));
                 }
             } catch (TechnicalException te) {
