@@ -32,6 +32,21 @@
     </files>
 
     <fileSets>
+        <fileSet>
+            <directory>${basedir}</directory>
+            <includes>
+                <include>README.adoc</include>
+            </includes>
+            <outputDirectory>docs</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}</directory>
+            <includes>
+                <include>${icon}</include>
+            </includes>
+        </fileSet>
+
         <!-- Then include Policy configuration schemas -->
         <fileSet>
             <directory>src/main/resources/schemas</directory>
