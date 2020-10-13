@@ -39,6 +39,12 @@ You can configure the policy with the following options :
 ^.^|boolean
 ^.^|_false_
 
+.^|useCustomApiKey
+^.^|-
+|Customer can use a custom API key
+^.^|boolean
+^.^|_false_
+
 |===
 
 
@@ -46,7 +52,8 @@ You can configure the policy with the following options :
 .Configuration
 ----
 "api-key": {
-  "propagateApiKey": false
+  "propagateApiKey": false,
+  "useCustomApiKey": false
 }
 ----
 

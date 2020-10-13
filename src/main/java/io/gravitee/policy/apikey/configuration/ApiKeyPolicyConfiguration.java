@@ -24,6 +24,7 @@ import io.gravitee.policy.api.PolicyConfiguration;
 public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     private boolean propagateApiKey = false;
+    private boolean useCustomApiKey = false;
 
     public boolean isPropagateApiKey() {
         return propagateApiKey;
@@ -31,5 +32,13 @@ public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     public void setPropagateApiKey(boolean propagateApiKey) {
         this.propagateApiKey = propagateApiKey;
+    }
+
+    public boolean isUseCustomApiKey() {
+        return useCustomApiKey;
+    }
+
+    public void setUseCustomApiKey(boolean useCustomApiKey) {
+        this.useCustomApiKey = useCustomApiKey;
     }
 }

@@ -5,6 +5,10 @@
     "propagateApiKey" : {
       "title": "Propagate API Key to upstream API",
       "type" : "boolean"
+    },
+    "useCustomApiKey" : {
+      "title": "Customer can use a custom API key",
+      "type" : "boolean"
     }
   }
 }
