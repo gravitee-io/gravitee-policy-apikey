@@ -1,4 +1,4 @@
-= API Key Policy
+= API key policy
 
 ifdef::env-github[]
 image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-apikey/master["Build status", link="https://ci.gravitee.io/job/gravitee-io/job/gravitee-policy-apikey/"]
@@ -19,23 +19,23 @@ endif::[]
 
 == Description
 
-API Key policy lets you enforce verification of API keys during request processing, letting only apps with approved API
-keys access your APIs.
+You can use the `api-key` policy to enforce API key checks during request processing, allowing only apps with approved API
+keys to access your APIs.
 
-This policy ensures that API keys are valid, have not been revoked or expired, and are approved to consume the specific
+This policy ensures that API keys are valid, have not been revoked or expired and are approved to consume the specific
 resources associated with your API.
 
 == Configuration
 
-=== Policy level
-You can configure the policy with the following options :
+=== Policy
+You can configure the following policy level options:
 
 |===
 |Property |Required |Description |Type |Default
 
-.^|propagateApiKey
+.^|`propagateApiKey`
 ^.^|-
-|Propagate API Key to upstream API
+|Propagate API key to upstream API
 ^.^|boolean
 ^.^|_false_
 
@@ -50,9 +50,9 @@ You can configure the policy with the following options :
 }
 ----
 
-=== Gateway level
-It is also possible to customize the `X-Gravitee-Api-Key` header or `api-key` query parameter.
-This can be done from gateway configuration file (`gravitee.yml`):
+=== Gateway
+You can also configure the policy in the APIM Gateway configuration file (`gravitee.yml`).
+You can customize the `X-Gravitee-Api-Key` header and `api-key` query parameter.
 
 [source, yaml]
 .Configuration
@@ -63,13 +63,11 @@ policy:
     param: custom-api-key
 ----
 
-
 == Errors
-If you're looking to override the default response provided by the policy, you can do it
-thanks to the response templates feature. These templates must be define at the API level (see `Response Templates`
-from the `Proxy` menu).
+You can use the response template feature to override the default response provided by the policy. These templates must be defined at the API level (see the API Console *Response Templates*
+option in the API *Proxy* menu).
 
-Here are the error keys send by this policy:
+The error keys sent by this policy are as follows:
 
 [cols="2*", options="header"]
 |===
