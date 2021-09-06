@@ -93,12 +93,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequest() throws TechnicalException {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -120,12 +115,7 @@ public class ApiKeyPolicyTest {
 
         apiKeyPolicy = new ApiKeyPolicy(null);
 
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -144,12 +134,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequest_withUnexpiredKey() throws TechnicalException {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpireAt(new Date());
@@ -174,12 +159,7 @@ public class ApiKeyPolicyTest {
         final String customHeader = "My-Custom-Api-Key";
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenReturn(customHeader);
 
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(customHeader, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(customHeader, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpireAt(new Date());
@@ -229,12 +209,7 @@ public class ApiKeyPolicyTest {
     @Test
     @Ignore
     public void testOnRequest_withUnexpiredKeyAndBadApi() throws TechnicalException {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpireAt(new Date());
@@ -256,12 +231,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequest_withExpiredKey() throws TechnicalException {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
         validApiKey.setExpireAt(new Date());
@@ -322,12 +292,7 @@ public class ApiKeyPolicyTest {
     @Test
     public void testOnRequestFailBecauseApiKeyNotFoundOnRepository() throws TechnicalException {
         final String notExistingApiKey = "not_existing_api_key";
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, notExistingApiKey);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, notExistingApiKey);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -345,12 +310,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequestFailBecauseApiKeyFoundButNotActive() throws TechnicalException{
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey invalidApiKey = new ApiKey();
         invalidApiKey.setRevoked(true);
 
@@ -368,12 +328,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testApiKey_notPropagatedBecauseNoConfig() throws TechnicalException{
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -393,12 +348,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testApiKey_notPropagatedBecauseItsAsked() throws TechnicalException{
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -418,12 +368,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testApiKey_propagated() throws TechnicalException{
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-            }
-        });
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -440,5 +385,15 @@ public class ApiKeyPolicyTest {
         Assert.assertTrue(request.headers().containsKey(X_GRAVITEE_API_KEY));
         verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
+    }
+
+    private HttpHeaders buildHttpHeaders(String headerKey, String headerValue) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAll(new HashMap<String, String>() {
+            {
+                put(headerKey, headerValue);
+            }
+        });
+        return headers;
     }
 }
