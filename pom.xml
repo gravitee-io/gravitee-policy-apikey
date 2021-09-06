@@ -30,13 +30,13 @@
     <parent>
         <groupId>io.gravitee</groupId>
         <artifactId>gravitee-parent</artifactId>
-        <version>15</version>
+        <version>15.1</version>
     </parent>
 
     <properties>
         <gravitee-gateway-api.version>1.23.0</gravitee-gateway-api.version>
         <gravitee-policy-api.version>1.10.0</gravitee-policy-api.version>
-        <gravitee-repository-api.version>3.5.0</gravitee-repository-api.version>
+        <gravitee-repository-api.version>3.12.0-SNAPSHOT</gravitee-repository-api.version>
 
         <json-schema-generator-maven-plugin.version>1.1.0</json-schema-generator-maven-plugin.version>
         <json-schema-generator-maven-plugin.outputDirectory>${project.build.directory}/schemas</json-schema-generator-maven-plugin.outputDirectory>
@@ -61,8 +61,8 @@
         </dependency>
 
         <dependency>
-            <groupId>io.gravitee.repository</groupId>
-            <artifactId>gravitee-repository</artifactId>
+            <groupId>io.gravitee.apim.repository</groupId>
+            <artifactId>gravitee-apim-repository-api</artifactId>
             <version>${gravitee-repository-api.version}</version>
             <scope>provided</scope>
         </dependency>
