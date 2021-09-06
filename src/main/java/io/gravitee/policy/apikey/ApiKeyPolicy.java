@@ -77,7 +77,9 @@ public class ApiKeyPolicy {
                                     + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
         } else {
             try {
-                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findByKey(requestApiKey);
+                final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
+
+                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findByKeyAndApi(requestApiKey, apiId);
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
 
@@ -87,8 +89,6 @@ public class ApiKeyPolicy {
                     // Be sure to force the plan to the one linked to the apikey
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
-
-                    final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
                     if (!apiKey.isRevoked()
                             && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
