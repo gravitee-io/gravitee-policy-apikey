@@ -77,7 +77,7 @@ public class ApiKeyPolicy {
                                     + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
         } else {
             try {
-                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findById(requestApiKey);
+                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findByKey(requestApiKey);
                 if (apiKeyOpt.isPresent()) {
                     ApiKey apiKey = apiKeyOpt.get();
 
