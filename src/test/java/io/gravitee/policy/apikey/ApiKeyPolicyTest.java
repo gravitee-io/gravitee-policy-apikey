@@ -15,13 +15,12 @@
  */
 package io.gravitee.policy.apikey;
 
-
-import io.gravitee.common.http.HttpHeaders;
 import io.gravitee.common.util.LinkedMultiValueMap;
 import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
+import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
@@ -41,7 +40,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Optional;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
@@ -184,7 +182,7 @@ public class ApiKeyPolicyTest {
         final String customQueryParameter = "my-api-key";
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenReturn(customQueryParameter);
 
-        final HttpHeaders headers = new HttpHeaders();
+        final HttpHeaders headers = HttpHeaders.create();
 
         final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
         parameters.put(customQueryParameter, Collections.singletonList(API_KEY_HEADER_VALUE));
@@ -254,7 +252,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequestFailBecauseNoApiKey() {
-        final HttpHeaders headers = new HttpHeaders();
+        final HttpHeaders headers = HttpHeaders.create();
 
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
@@ -267,7 +265,7 @@ public class ApiKeyPolicyTest {
 
     @Test
     public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
-        final HttpHeaders headers = new HttpHeaders();
+        final HttpHeaders headers = HttpHeaders.create();
 
         final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
         parameters.put(ApiKeyPolicy.DEFAULT_API_KEY_QUERY_PARAMETER, Collections.singletonList(API_KEY_HEADER_VALUE));
@@ -341,7 +339,7 @@ public class ApiKeyPolicyTest {
 
         (new ApiKeyPolicy(null)).onRequest(request, response, executionContext, policyChain);
 
-        Assert.assertFalse(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
         verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
@@ -361,7 +359,7 @@ public class ApiKeyPolicyTest {
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        Assert.assertFalse(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
         verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
@@ -382,18 +380,14 @@ public class ApiKeyPolicyTest {
         when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        Assert.assertTrue(request.headers().containsKey(X_GRAVITEE_API_KEY));
+        Assert.assertTrue(request.headers().contains(X_GRAVITEE_API_KEY));
         verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     private HttpHeaders buildHttpHeaders(String headerKey, String headerValue) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(headerKey, headerValue);
-            }
-        });
-        return headers;
+        return HttpHeaders
+                .create()
+                        .add(headerKey, headerValue);
     }
 }
