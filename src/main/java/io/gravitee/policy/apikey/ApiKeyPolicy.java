@@ -27,12 +27,11 @@ import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
+import java.util.Date;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
-
-import java.util.Date;
-import java.util.Optional;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -69,12 +68,17 @@ public class ApiKeyPolicy {
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
-            policyChain.failWith(PolicyResult
-                    .failure(
-                            API_KEY_MISSING_KEY,
-                            HttpStatusCode.UNAUTHORIZED_401,
-                            "No API Key has been specified in headers (" + API_KEY_HEADER
-                                    + ") or query parameters (" + API_KEY_QUERY_PARAMETER + ")."));
+            policyChain.failWith(
+                PolicyResult.failure(
+                    API_KEY_MISSING_KEY,
+                    HttpStatusCode.UNAUTHORIZED_401,
+                    "No API Key has been specified in headers (" +
+                    API_KEY_HEADER +
+                    ") or query parameters (" +
+                    API_KEY_QUERY_PARAMETER +
+                    ")."
+                )
+            );
         } else {
             try {
                 final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
@@ -90,31 +94,33 @@ public class ApiKeyPolicy {
                     executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
                     executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
-                    if (!apiKey.isRevoked()
-                            && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
+                    if (
+                        !apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))
+                    ) {
                         policyChain.doNext(request, response);
                     } else {
                         // The api key is not valid
                         policyChain.failWith(
-                                PolicyResult.failure(
-                                        API_KEY_INVALID_KEY,
-                                        HttpStatusCode.UNAUTHORIZED_401,
-                                        "API Key is not valid or is expired / revoked."));
+                            PolicyResult.failure(
+                                API_KEY_INVALID_KEY,
+                                HttpStatusCode.UNAUTHORIZED_401,
+                                "API Key is not valid or is expired / revoked."
+                            )
+                        );
                     }
                 } else {
                     // The api key does not exist
                     policyChain.failWith(
-                            PolicyResult.failure(
-                                    API_KEY_INVALID_KEY,
-                                    HttpStatusCode.UNAUTHORIZED_401,
-                                    "API Key is not valid or is expired / revoked."));
+                        PolicyResult.failure(
+                            API_KEY_INVALID_KEY,
+                            HttpStatusCode.UNAUTHORIZED_401,
+                            "API Key is not valid or is expired / revoked."
+                        )
+                    );
                 }
             } catch (TechnicalException te) {
                 LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.failWith(
-                        PolicyResult.failure(
-                                API_KEY_INVALID_KEY,
-                                "API Key is not valid or is expired / revoked."));
+                policyChain.failWith(PolicyResult.failure(API_KEY_INVALID_KEY, "API Key is not valid or is expired / revoked."));
             }
         }
     }
@@ -128,7 +134,7 @@ public class ApiKeyPolicy {
 
         // 1_ First, search in HTTP headers
         String apiKey = request.headers().getFirst(API_KEY_HEADER);
-        if (apiKeyPolicyConfiguration == null || ! apiKeyPolicyConfiguration.isPropagateApiKey()) {
+        if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
             request.headers().remove(API_KEY_HEADER);
         }
 
@@ -136,7 +142,7 @@ public class ApiKeyPolicy {
             // 2_ If not found, search in query parameters
             apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
 
-            if (apiKeyPolicyConfiguration == null || ! apiKeyPolicyConfiguration.isPropagateApiKey()) {
+            if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
                 request.parameters().remove(API_KEY_QUERY_PARAMETER);
             }
         }
