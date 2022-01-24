@@ -42,7 +42,7 @@
         <json-schema-generator-maven-plugin.outputDirectory>${project.build.directory}/schemas</json-schema-generator-maven-plugin.outputDirectory>
         <junit-jupiter.version>5.8.2</junit-jupiter.version>
 
-        <maven-assembly-plugin.version>2.5.5</maven-assembly-plugin.version>
+        <maven-assembly-plugin.version>2.6</maven-assembly-plugin.version>
         <!-- Property used by the publication job in CI-->
         <publish-folder-path>graviteeio-apim/plugins/policies</publish-folder-path>
         <gravitee-apim-gateway-tests-sdk.version>3.18.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
