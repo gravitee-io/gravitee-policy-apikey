@@ -16,51 +16,53 @@
 package io.gravitee.policy.apikey;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
+import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
+import static io.gravitee.gateway.reactive.api.context.ExecutionContext.*;
+import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.MockitoAnnotations.initMocks;
 
+import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.common.util.LinkedMultiValueMap;
 import io.gravitee.common.util.MultiValueMap;
-import io.gravitee.gateway.api.ExecutionContext;
-import io.gravitee.gateway.api.Request;
-import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.http.HttpHeaders;
-import io.gravitee.policy.api.PolicyChain;
-import io.gravitee.policy.api.PolicyResult;
+import io.gravitee.gateway.reactive.api.context.Request;
+import io.gravitee.gateway.reactive.api.context.RequestExecutionContext;
+import io.gravitee.gateway.reactive.api.context.Response;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Collections;
+import io.reactivex.Completable;
+import io.reactivex.observers.TestObserver;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 
 /**
- * @author David BRASSELY (david.brassely at graviteesource.com)
+ * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class ApiKeyPolicyTest {
 
-    private static final String API_KEY_HEADER_VALUE = "fbc40d50-5746-40af-b283-d7e99c1775c7";
+    private static final String API_KEY = "fbc40d50-5746-40af-b283-d7e99c1775c7";
 
-    private static final String API_NAME_HEADER_VALUE = "my-api";
-    private static final String PLAN_NAME_HEADER_VALUE = "my-plan";
-
-    private ApiKeyPolicy apiKeyPolicy;
+    private static final String API_ID = "apiId";
+    private static final String PLAN_ID = "planId";
+    protected static final String APPLICATION_ID = "applicationId";
+    protected static final String SUBSCRIPTION_ID = "subscriptionId";
+    protected static final Date EXPIRE_AT = new Date(System.currentTimeMillis() + 3600000);
+    protected static final RuntimeException MOCK_EXCEPTION = new RuntimeException("Mock exception");
 
     @Mock
-    private ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
+    private ApiKeyPolicyConfiguration configuration;
 
     @Mock
     private ApiKeyRepository apiKeyRepository;
@@ -72,323 +74,441 @@ public class ApiKeyPolicyTest {
     private Response response;
 
     @Mock
-    private PolicyChain policyChain;
-
-    @Mock
-    private ExecutionContext executionContext;
+    private RequestExecutionContext ctx;
 
     @Mock
     private Environment environment;
 
-    @Before
-    public void init() {
-        initMocks(this);
-
-        apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
+    @BeforeEach
+    void init() throws Exception {
         ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
         ApiKeyPolicy.API_KEY_HEADER = null;
-        when(executionContext.getComponent(Environment.class)).thenReturn(environment);
-        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString()))
-            .thenAnswer(invocation -> invocation.getArguments()[1]);
-        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString()))
-            .thenAnswer(invocation -> invocation.getArguments()[1]);
+
+        lenient().when(ctx.request()).thenReturn(request);
+        lenient().when(request.timestamp()).thenReturn(System.currentTimeMillis());
+
+        // Initialize default header and query param names to get api key from.
+        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, DEFAULT_API_KEY_QUERY_PARAMETER);
     }
 
     @Test
-    public void testOnRequest() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+    void shouldCompleteWhenApiKeyIsValid() throws TechnicalException {
+        final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
+        final ApiKey apiKey = buildApiKey();
 
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
+        when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        mockRepository(apiKey);
 
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+        obs.assertResult();
+
+        verify(ctx).setAttribute(ATTR_APPLICATION, apiKey.getApplication());
+        verify(ctx).setAttribute(ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+        verify(ctx).setAttribute(ATTR_PLAN, apiKey.getPlan());
+        verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+
+        assertEquals(API_KEY, headers.get(X_GRAVITEE_API_KEY));
     }
 
     @Test
-    public void test_withNullConfiguration() throws TechnicalException {
-        apiKeyPolicy = new ApiKeyPolicy(null);
+    void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
 
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+        mockRepository(apiKey);
 
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+        obs.assertResult();
     }
 
     @Test
-    public void testOnRequest_withUnexpiredKey() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setExpireAt(new Date());
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenConfigurationIsNull() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
 
-        Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
-
-        when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
-    }
-
-    @Test
-    public void testOnRequest_withCustomHeader() throws TechnicalException {
-        final String customHeader = "My-Custom-Api-Key";
-        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenReturn(customHeader);
-
-        final HttpHeaders headers = buildHttpHeaders(customHeader, API_KEY_HEADER_VALUE);
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setExpireAt(new Date());
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
-
-        when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
-    }
-
-    @Test
-    public void testOnRequest_withCustomQueryParameter() throws TechnicalException {
-        final String customQueryParameter = "my-api-key";
-        when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenReturn(customQueryParameter);
-
-        final HttpHeaders headers = HttpHeaders.create();
-
-        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-        parameters.put(customQueryParameter, Collections.singletonList(API_KEY_HEADER_VALUE));
-
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        when(request.headers()).thenReturn(headers);
-        when(request.parameters()).thenReturn(parameters);
-
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
-    }
-
-    @Test
-    @Ignore
-    public void testOnRequest_withUnexpiredKeyAndBadApi() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setExpireAt(new Date());
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
-
-        when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain, times(0)).doNext(request, response);
-    }
-
-    @Test
-    public void testOnRequest_withExpiredKey() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setExpireAt(new Date());
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        Instant requestDate = validApiKey.getExpireAt().toInstant().plus(Duration.ofHours(1));
-
-        when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).failWith(any(PolicyResult.class));
-    }
-
-    @Test
-    public void testOnRequestFailBecauseNoApiKey() {
-        final HttpHeaders headers = HttpHeaders.create();
-
-        when(request.headers()).thenReturn(headers);
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+        when(request.headers()).thenReturn(mock(HttpHeaders.class));
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
 
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
+        mockRepository(apiKey);
 
-        verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).failWith(any(PolicyResult.class));
+        final ApiKeyPolicy cut = new ApiKeyPolicy(null);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
     }
 
     @Test
-    public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
-        final HttpHeaders headers = HttpHeaders.create();
+    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
 
-        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-        parameters.put(ApiKeyPolicy.DEFAULT_API_KEY_QUERY_PARAMETER, Collections.singletonList(API_KEY_HEADER_VALUE));
+        when(configuration.isPropagateApiKey()).thenReturn(false);
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+        when(request.headers()).thenReturn(mock(HttpHeaders.class));
+        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+        mockRepository(apiKey);
 
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
+        obs.assertResult();
+
+        verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
+    }
+
+    @Test
+    void shouldCompleteAndRemoveApiKeyFromHeaderWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+        final ApiKey apiKey = buildApiKey();
+
+        when(configuration.isPropagateApiKey()).thenReturn(false);
         when(request.headers()).thenReturn(headers);
+        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertFalse(headers.contains(X_GRAVITEE_API_KEY));
+    }
+
+    @Test
+    void shouldCompleteWhenCustomHeader() throws TechnicalException {
+        final String customHeader = "My-Custom-Api-Key";
+
+        final HttpHeaders headers = buildHttpHeaders(customHeader);
+        final ApiKey apiKey = buildApiKey();
+
+        initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(request.headers()).thenReturn(headers);
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertTrue(headers.contains(customHeader));
+    }
+
+    @Test
+    void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+        final String customHeader = "My-Custom-Api-Key";
+
+        final HttpHeaders headers = buildHttpHeaders(customHeader);
+        final ApiKey apiKey = buildApiKey();
+
+        initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+        when(configuration.isPropagateApiKey()).thenReturn(false);
+        when(request.headers()).thenReturn(headers);
+        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertFalse(headers.contains(customHeader));
+    }
+
+    @Test
+    void shouldCompleteAndRemoveApiKeyFromQueryParamWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
+        final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
+
+        when(request.parameters()).thenReturn(parameters);
+        when(configuration.isPropagateApiKey()).thenReturn(false);
+        when(request.headers()).thenReturn(HttpHeaders.create());
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertFalse(request.parameters().containsKey(DEFAULT_API_KEY_QUERY_PARAMETER));
+    }
+
+    @Test
+    void shouldCompleteWhenCustomQueryParam() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
+        final String customQueryParam = "My-Custom-Api-Key";
+        final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
+
+        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
+        when(request.parameters()).thenReturn(parameters);
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(request.headers()).thenReturn(HttpHeaders.create());
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertTrue(request.parameters().containsKey(customQueryParam));
+    }
+
+    @Test
+    void shouldCompleteAndRemoveApiKeyFromCustomQueryParamWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
+        final String customQueryParam = "My-Custom-Api-Key";
+        final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
+
+        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
+        when(request.parameters()).thenReturn(parameters);
+        when(configuration.isPropagateApiKey()).thenReturn(false);
+        when(request.headers()).thenReturn(mock(HttpHeaders.class));
+        mockRepository(apiKey);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertResult();
+
+        assertFalse(request.parameters().containsKey(customQueryParam));
+    }
+
+    @Test
+    void shouldInterruptWith401WhenNoApiKey() {
+        when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+        when(request.headers()).thenReturn(HttpHeaders.create());
+        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertFailure(Throwable.class);
+
+        verify(ctx)
+            .interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals(
+                        "No API Key has been specified in headers (X-Gravitee-Api-Key) or query parameters (api-key).",
+                        failure.message()
+                    );
+                    assertEquals(API_KEY_MISSING_KEY, failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
+
+                    return true;
+                })
+            );
+    }
+
+    @Test
+    void shouldInterruptWith401WhenApiKeyExpired() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
+        apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
+
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+        mockRepository(apiKey);
+        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertFailure(Throwable.class);
+
+        verify(ctx)
+            .interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
+
+                    return true;
+                })
+            );
+    }
+
+    @Test
+    void shouldInterruptWith401WhenApiKeyRevoked() throws TechnicalException {
+        final ApiKey apiKey = buildApiKey();
+        apiKey.setRevoked(true);
+
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+        mockRepository(apiKey);
+        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertFailure(Throwable.class);
+
+        verify(ctx)
+            .interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
+
+                    return true;
+                })
+            );
+    }
+
+    @Test
+    void shouldInterruptWith401WhenApiKeyNotFound() throws TechnicalException {
+        final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
+
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(request.headers()).thenReturn(headers);
+        mockRepository(null);
+        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertFailure(Throwable.class);
+
+        verify(ctx)
+            .interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
+
+                    return true;
+                })
+            );
+    }
+
+    @Test
+    void shouldInterruptWith401WhenExceptionOccurred() throws TechnicalException {
+        when(configuration.isPropagateApiKey()).thenReturn(true);
+        when(request.headers()).thenThrow(MOCK_EXCEPTION);
+        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+        obs.assertFailure(Throwable.class);
+
+        verify(ctx)
+            .interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
+
+                    return true;
+                })
+            );
+    }
+
+    @Test
+    void shouldReturnCanHandleWhenApiKeyInternalAttributeIsFound() {
+        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Boolean> obs = cut.support(ctx).test();
+
+        obs.assertResult(true);
+    }
+
+    @Test
+    void shouldReturnCanHandleWhenApiKeyHeaderIsFound() {
+        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+        when(request.headers()).thenReturn(headers);
+
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Boolean> obs = cut.support(ctx).test();
+
+        obs.assertResult(true);
+    }
+
+    @Test
+    void shouldReturnCanHandleWhenApiKeyQueryParamIsFound() {
+        final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
+        when(request.headers()).thenReturn(HttpHeaders.create());
         when(request.parameters()).thenReturn(parameters);
 
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Boolean> obs = cut.support(ctx).test();
 
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+        obs.assertResult(true);
     }
 
     @Test
-    public void testOnRequestFailBecauseApiKeyNotFoundOnRepository() throws TechnicalException {
-        final String notExistingApiKey = "not_existing_api_key";
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, notExistingApiKey);
+    void shouldReturnCannotHandleWhenNoApiKeyIsFound() {
+        when(request.headers()).thenReturn(HttpHeaders.create());
+        when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
 
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        final TestObserver<Boolean> obs = cut.support(ctx).test();
 
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(notExistingApiKey, API_NAME_HEADER_VALUE)).thenReturn(Optional.empty());
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).failWith(any(PolicyResult.class));
+        obs.assertResult(false);
     }
 
     @Test
-    public void testOnRequestFailBecauseApiKeyFoundButNotActive() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-        final ApiKey invalidApiKey = new ApiKey();
-        invalidApiKey.setRevoked(true);
-
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(policyChain, times(0)).doNext(request, response);
-        verify(policyChain).failWith(any(PolicyResult.class));
+    void shouldNotValidateSubscription() {
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        assertFalse(cut.requireSubscription());
     }
 
     @Test
-    public void testApiKey_notPropagatedBecauseNoConfig() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        (new ApiKeyPolicy(null)).onRequest(request, response, executionContext, policyChain);
-
-        Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+    void shouldReturnIdApiKey() {
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        assertEquals("api-key", cut.id());
     }
 
     @Test
-    public void testApiKey_notPropagatedBecauseItsAsked() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+    void shouldReturnOrder500() {
+        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+        assertEquals(500, cut.order());
     }
 
-    @Test
-    public void testApiKey_propagated() throws TechnicalException {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        Assert.assertTrue(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
-        verify(policyChain).doNext(request, response);
+    private ApiKey buildApiKey() {
+        final ApiKey apiKey = new ApiKey();
+        apiKey.setRevoked(false);
+        apiKey.setExpireAt(EXPIRE_AT);
+        apiKey.setPlan(PLAN_ID);
+        apiKey.setApplication(APPLICATION_ID);
+        apiKey.setSubscription(SUBSCRIPTION_ID);
+        return apiKey;
     }
 
-    private HttpHeaders buildHttpHeaders(String headerKey, String headerValue) {
-        return HttpHeaders.create().add(headerKey, headerValue);
+    private HttpHeaders buildHttpHeaders(String headerKey) {
+        return HttpHeaders.create().add(headerKey, ApiKeyPolicyTest.API_KEY);
+    }
+
+    private MultiValueMap<String, String> buildQueryParameters(String paramKey) {
+        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+        parameters.put(paramKey, List.of(ApiKeyPolicyTest.API_KEY));
+        return parameters;
+    }
+
+    private void mockRepository(ApiKey apiKey) throws TechnicalException {
+        when(ctx.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
+        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.ofNullable(apiKey));
+    }
+
+    private void initializeParamNames(String apiKeyHeaderName, String apiKeyQueryParameterName) {
+        ApiKeyPolicy.API_KEY_HEADER = apiKeyHeaderName;
+        ApiKeyPolicy.API_KEY_QUERY_PARAMETER = apiKeyQueryParameterName;
     }
 }
