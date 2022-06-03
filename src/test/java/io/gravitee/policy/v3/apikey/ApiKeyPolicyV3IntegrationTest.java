@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.policy.apikey;
+package io.gravitee.policy.v3.apikey;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.ok;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -26,9 +23,12 @@ import static org.mockito.Mockito.when;
 import io.gravitee.apim.gateway.tests.sdk.AbstractPolicyTest;
 import io.gravitee.apim.gateway.tests.sdk.annotations.DeployApi;
 import io.gravitee.apim.gateway.tests.sdk.annotations.GatewayTest;
+import io.gravitee.apim.gateway.tests.sdk.configuration.GatewayConfigurationBuilder;
 import io.gravitee.definition.model.Api;
+import io.gravitee.definition.model.ExecutionMode;
 import io.gravitee.definition.model.Plan;
 import io.gravitee.gateway.handlers.api.definition.ApiKey;
+import io.gravitee.policy.apikey.ApiKeyPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
@@ -48,7 +48,12 @@ import org.junit.jupiter.api.Test;
  */
 @GatewayTest
 @DeployApi("/apis/api-key.json")
-class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
+public class ApiKeyPolicyV3IntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
+
+    @Override
+    protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
+        gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "false");
+    }
 
     /**
      * Override api plans to have a published API_KEY one.
@@ -63,6 +68,7 @@ class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKe
         apiKeyPlan.setStatus("PUBLISHED");
         apiKeyPlan.setSecurityDefinition("{\"propagateApiKey\":true}");
         api.setPlans(Collections.singletonList(apiKeyPlan));
+        api.setExecutionMode(ExecutionMode.V3);
     }
 
     @Test

@@ -30,22 +30,29 @@
     <parent>
         <groupId>io.gravitee</groupId>
         <artifactId>gravitee-parent</artifactId>
-        <version>20.1</version>
+        <version>20.2</version>
     </parent>
 
     <properties>
         <gravitee-bom.version>2.5</gravitee-bom.version>
-        <gravitee-gateway-api.version>1.32.2</gravitee-gateway-api.version>
+        <gravitee-gateway-api.version>1.33.0-prototype-reactive-SNAPSHOT</gravitee-gateway-api.version>
         <gravitee-policy-api.version>1.11.0</gravitee-policy-api.version>
-        <gravitee-repository-api.version>3.17.0</gravitee-repository-api.version>
+        <gravitee-repository-api.version>3.18.0-SNAPSHOT</gravitee-repository-api.version>
         <json-schema-generator-maven-plugin.version>1.1.0</json-schema-generator-maven-plugin.version>
-        <json-schema-generator-maven-plugin.outputDirectory>${project.build.directory}/schemas</json-schema-generator-maven-plugin.outputDirectory>
+        <json-schema-generator-maven-plugin.outputDirectory>${project.build.directory}/schemas
+        </json-schema-generator-maven-plugin.outputDirectory>
         <junit-jupiter.version>5.8.2</junit-jupiter.version>
+        <mockito-junit-jupiter.version>4.0.0</mockito-junit-jupiter.version>
 
         <maven-assembly-plugin.version>2.6</maven-assembly-plugin.version>
         <!-- Property used by the publication job in CI-->
         <publish-folder-path>graviteeio-apim/plugins/policies</publish-folder-path>
         <gravitee-apim-gateway-tests-sdk.version>3.18.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
+        <gravitee-node-api.version>1.21.0</gravitee-node-api.version>
+        <gravitee-node.version>1.24.2</gravitee-node.version>
+        <gravitee-common.version>1.27.0-prototype-reactive-SNAPSHOT</gravitee-common.version>
+        <gravitee-plugin.version>1.24.0-prototype-reactive-SNAPSHOT</gravitee-plugin.version>
+        <gravitee-connector-api.version>1.1.0</gravitee-connector-api.version>
     </properties>
 
     <dependencyManagement>
@@ -57,6 +64,35 @@
                 <version>${gravitee-bom.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>io.gravitee.plugin</groupId>
+                <artifactId>gravitee-plugin</artifactId>
+                <version>${gravitee-plugin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.gravitee.common</groupId>
+                <artifactId>gravitee-common</artifactId>
+                <version>${gravitee-common.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gravitee.node</groupId>
+                <artifactId>gravitee-node</artifactId>
+                <version>${gravitee-node.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>io.gravitee.gateway</groupId>
+                <artifactId>gravitee-gateway-api</artifactId>
+                <version>${gravitee-gateway-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gravitee.connector</groupId>
+                <artifactId>gravitee-connector-api</artifactId>
+                <version>${gravitee-connector-api.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -84,6 +120,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>io.gravitee.node</groupId>
+            <artifactId>gravitee-node-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Logging dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -100,14 +142,18 @@
 
         <!-- Test scope -->
         <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
             <scope>test</scope>
         </dependency>
 
