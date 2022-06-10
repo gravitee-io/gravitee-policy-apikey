@@ -15,15 +15,15 @@
  */
 package io.gravitee.policy.apikey;
 
-import static io.gravitee.gateway.reactive.api.context.ExecutionContext.*;
+import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
 
 import io.gravitee.common.http.GraviteeHttpHeader;
 import io.gravitee.common.http.HttpStatusCode;
-import io.gravitee.gateway.reactive.api.ExecutionFailure;
-import io.gravitee.gateway.reactive.api.context.ExecutionContext;
-import io.gravitee.gateway.reactive.api.context.Request;
-import io.gravitee.gateway.reactive.api.context.RequestExecutionContext;
-import io.gravitee.gateway.reactive.api.policy.SecurityPolicy;
+import io.gravitee.gateway.jupiter.api.ExecutionFailure;
+import io.gravitee.gateway.jupiter.api.context.ExecutionContext;
+import io.gravitee.gateway.jupiter.api.context.Request;
+import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
+import io.gravitee.gateway.jupiter.api.policy.SecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.gravitee.repository.management.api.ApiKeyRepository;
