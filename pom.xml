@@ -35,7 +35,7 @@
 
     <properties>
         <gravitee-bom.version>2.5</gravitee-bom.version>
-        <gravitee-gateway-api.version>1.33.0-prototype-reactive-SNAPSHOT</gravitee-gateway-api.version>
+        <gravitee-gateway-api.version>1.33.0</gravitee-gateway-api.version>
         <gravitee-policy-api.version>1.11.0</gravitee-policy-api.version>
         <gravitee-repository-api.version>3.18.0-SNAPSHOT</gravitee-repository-api.version>
         <json-schema-generator-maven-plugin.version>1.1.0</json-schema-generator-maven-plugin.version>
@@ -50,8 +50,8 @@
         <gravitee-apim-gateway-tests-sdk.version>3.18.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
         <gravitee-node-api.version>1.21.0</gravitee-node-api.version>
         <gravitee-node.version>1.24.2</gravitee-node.version>
-        <gravitee-common.version>1.27.0-prototype-reactive-SNAPSHOT</gravitee-common.version>
-        <gravitee-plugin.version>1.24.0-prototype-reactive-SNAPSHOT</gravitee-plugin.version>
+        <gravitee-common.version>1.27.0</gravitee-common.version>
+        <gravitee-plugin.version>1.24.1</gravitee-plugin.version>
         <gravitee-connector-api.version>1.1.0</gravitee-connector-api.version>
     </properties>
 
