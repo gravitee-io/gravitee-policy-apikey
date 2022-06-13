@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.policy.v3.apikey;
+package io.gravitee.policy.apikey;
 
 import io.gravitee.apim.gateway.tests.sdk.configuration.GatewayConfigurationBuilder;
 import io.gravitee.definition.model.Api;
 import io.gravitee.definition.model.ExecutionMode;
-import io.gravitee.policy.apikey.ApiKeyPolicyIntegrationTest;
 
 /**
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyIntegrationTest {
+public class ApiKeyPolicyV3CompatibilityIntegrationTest extends ApiKeyPolicyIntegrationTest {
 
     @Override
     protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
-        gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "false");
+        super.configureGateway(gatewayConfigurationBuilder);
+        gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "true");
     }
 
     @Override
