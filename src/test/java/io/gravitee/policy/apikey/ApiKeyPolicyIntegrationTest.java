@@ -15,10 +15,7 @@
  */
 package io.gravitee.policy.apikey;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.ok;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -28,11 +25,9 @@ import io.gravitee.apim.gateway.tests.sdk.annotations.DeployApi;
 import io.gravitee.apim.gateway.tests.sdk.annotations.GatewayTest;
 import io.gravitee.definition.model.Api;
 import io.gravitee.definition.model.Plan;
-import io.gravitee.gateway.handlers.api.definition.ApiKey;
+import io.gravitee.gateway.api.cache.ApiKey;
+import io.gravitee.gateway.handlers.api.cache.ApiKeyCacheManager;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.repository.exceptions.TechnicalException;
-import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.model.Subscription;
 import io.reactivex.observers.TestObserver;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
@@ -87,12 +82,12 @@ class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKe
 
     @Test
     @DisplayName("Should access API with API-Key header")
-    void shouldAccessApiWithApiKeyHeader(WebClient client) throws TechnicalException {
+    void shouldAccessApiWithApiKeyHeader(WebClient client) {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
-        final ApiKey apiKey = fakeApiKeyFromDb();
+        final ApiKey apiKey = fakeApiKeyFromCache();
 
-        when(getBean(ApiKeyRepository.class).findByKeyAndApi(any(), any())).thenReturn(Optional.of(apiKey));
+        when(getBean(ApiKeyCacheManager.class).get(any(), any())).thenReturn(Optional.of(apiKey));
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
 
@@ -111,12 +106,12 @@ class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKe
 
     @Test
     @DisplayName("Should access API with API-Key query param")
-    void shouldAccessApiWithApiKeyQueryParam(WebClient client) throws TechnicalException {
+    void shouldAccessApiWithApiKeyQueryParam(WebClient client) {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
-        final ApiKey apiKey = fakeApiKeyFromDb();
+        final ApiKey apiKey = fakeApiKeyFromCache();
 
-        when(getBean(ApiKeyRepository.class).findByKeyAndApi(any(), any())).thenReturn(Optional.of(apiKey));
+        when(getBean(ApiKeyCacheManager.class).get(any(), any())).thenReturn(Optional.of(apiKey));
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").addQueryParam("api-key", "apiKeyValue").rxSend().test();
 
@@ -134,22 +129,15 @@ class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKe
     }
 
     /**
-     * Generate the ApiKey object that would be returned by the ApiKeyRepository
+     * Generate the ApiKey object that would be returned by the ApiKeyCacheManager
      * @return the ApiKey object
      */
-    private ApiKey fakeApiKeyFromDb() {
-        final io.gravitee.repository.management.model.ApiKey repoApiKey = new io.gravitee.repository.management.model.ApiKey();
-        repoApiKey.setApplication("application-id");
-        repoApiKey.setSubscription("subscription-id");
-        repoApiKey.setPlan("plan-id");
-        repoApiKey.setKey("key-id");
-
-        Subscription subscription = new Subscription();
-        subscription.setPlan("plan-id");
-        subscription.setId("subscription-id");
-        subscription.setStatus(Subscription.Status.ACCEPTED);
-
-        final ApiKey apiKey = new ApiKey(repoApiKey, subscription);
+    private ApiKey fakeApiKeyFromCache() {
+        final ApiKey apiKey = new ApiKey();
+        apiKey.setApplication("application-id");
+        apiKey.setSubscription("subscription-id");
+        apiKey.setPlan("plan-id");
+        apiKey.setKey("key-id");
         return apiKey;
     }
 }

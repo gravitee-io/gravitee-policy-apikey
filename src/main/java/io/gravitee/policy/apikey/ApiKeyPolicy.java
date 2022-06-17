@@ -20,13 +20,12 @@ import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
+import io.gravitee.gateway.api.cache.ApiKey;
+import io.gravitee.gateway.api.cache.ApiKeyCacheManager;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.repository.exceptions.TechnicalException;
-import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.model.ApiKey;
 import java.util.Date;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -80,36 +79,24 @@ public class ApiKeyPolicy {
                 )
             );
         } else {
-            try {
-                final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
+            final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
-                Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyRepository.class).findByKeyAndApi(requestApiKey, apiId);
-                if (apiKeyOpt.isPresent()) {
-                    ApiKey apiKey = apiKeyOpt.get();
+            Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyCacheManager.class).get(apiId, requestApiKey);
 
-                    // Add data about api-key and subscription into the execution context
-                    executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
-                    executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
-                    // Be sure to force the plan to the one linked to the apikey
-                    executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
-                    executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
+            if (apiKeyOpt.isPresent()) {
+                ApiKey apiKey = apiKeyOpt.get();
 
-                    if (
-                        !apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))
-                    ) {
-                        policyChain.doNext(request, response);
-                    } else {
-                        // The api key is not valid
-                        policyChain.failWith(
-                            PolicyResult.failure(
-                                API_KEY_INVALID_KEY,
-                                HttpStatusCode.UNAUTHORIZED_401,
-                                "API Key is not valid or is expired / revoked."
-                            )
-                        );
-                    }
+                // Add data about api-key and subscription into the execution context
+                executionContext.setAttribute(ExecutionContext.ATTR_APPLICATION, apiKey.getApplication());
+                executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+                // Be sure to force the plan to the one linked to the apikey
+                executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
+                executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
+
+                if (!apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
+                    policyChain.doNext(request, response);
                 } else {
-                    // The api key does not exist
+                    // The api key is not valid
                     policyChain.failWith(
                         PolicyResult.failure(
                             API_KEY_INVALID_KEY,
@@ -118,9 +105,15 @@ public class ApiKeyPolicy {
                         )
                     );
                 }
-            } catch (TechnicalException te) {
-                LOGGER.error("An unexpected error occurs while validation API Key. Returning 500 status code.", te);
-                policyChain.failWith(PolicyResult.failure(API_KEY_INVALID_KEY, "API Key is not valid or is expired / revoked."));
+            } else {
+                // The api key does not exist
+                policyChain.failWith(
+                    PolicyResult.failure(
+                        API_KEY_INVALID_KEY,
+                        HttpStatusCode.UNAUTHORIZED_401,
+                        "API Key is not valid or is expired / revoked."
+                    )
+                );
             }
         }
     }

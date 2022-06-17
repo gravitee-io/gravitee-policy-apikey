@@ -24,13 +24,12 @@ import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
+import io.gravitee.gateway.api.cache.ApiKey;
+import io.gravitee.gateway.api.cache.ApiKeyCacheManager;
 import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.repository.exceptions.TechnicalException;
-import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.model.ApiKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -63,7 +62,7 @@ public class ApiKeyPolicyTest {
     private ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
     @Mock
-    private ApiKeyRepository apiKeyRepository;
+    private ApiKeyCacheManager apiKeyCacheManager;
 
     @Mock
     private Request request;
@@ -95,7 +94,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testOnRequest() throws TechnicalException {
+    public void testOnRequest() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
@@ -103,18 +102,18 @@ public class ApiKeyPolicyTest {
         validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void test_withNullConfiguration() throws TechnicalException {
+    public void test_withNullConfiguration() {
         apiKeyPolicy = new ApiKeyPolicy(null);
 
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
@@ -124,18 +123,18 @@ public class ApiKeyPolicyTest {
         validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testOnRequest_withUnexpiredKey() throws TechnicalException {
+    public void testOnRequest_withUnexpiredKey() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -146,18 +145,18 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testOnRequest_withCustomHeader() throws TechnicalException {
+    public void testOnRequest_withCustomHeader() {
         final String customHeader = "My-Custom-Api-Key";
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_HEADER_PROPERTY), anyString())).thenReturn(customHeader);
 
@@ -171,18 +170,18 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testOnRequest_withCustomQueryParameter() throws TechnicalException {
+    public void testOnRequest_withCustomQueryParameter() {
         final String customQueryParameter = "my-api-key";
         when(environment.getProperty(eq(ApiKeyPolicy.API_KEY_QUERY_PARAMETER_PROPERTY), anyString())).thenReturn(customQueryParameter);
 
@@ -198,19 +197,19 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(parameters);
 
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
     @Ignore
-    public void testOnRequest_withUnexpiredKeyAndBadApi() throws TechnicalException {
+    public void testOnRequest_withUnexpiredKeyAndBadApi() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -221,18 +220,18 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
     }
 
     @Test
-    public void testOnRequest_withExpiredKey() throws TechnicalException {
+    public void testOnRequest_withExpiredKey() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
         validApiKey.setRevoked(false);
@@ -243,13 +242,13 @@ public class ApiKeyPolicyTest {
 
         when(request.headers()).thenReturn(headers);
         when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
     }
@@ -268,7 +267,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testOnRequestDoNotFailApiKeyOnHeader() throws TechnicalException {
+    public void testOnRequestDoNotFailApiKeyOnHeader() {
         final HttpHeaders headers = HttpHeaders.create();
 
         final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
@@ -281,18 +280,18 @@ public class ApiKeyPolicyTest {
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(parameters);
 
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testOnRequestFailBecauseApiKeyNotFoundOnRepository() throws TechnicalException {
+    public void testOnRequestFailBecauseApiKeyNotFoundOnRepository() {
         final String notExistingApiKey = "not_existing_api_key";
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, notExistingApiKey);
 
@@ -300,9 +299,9 @@ public class ApiKeyPolicyTest {
         validApiKey.setRevoked(false);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(notExistingApiKey, API_NAME_HEADER_VALUE)).thenReturn(Optional.empty());
+        when(apiKeyCacheManager.get(notExistingApiKey, API_NAME_HEADER_VALUE)).thenReturn(Optional.empty());
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -311,15 +310,15 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testOnRequestFailBecauseApiKeyFoundButNotActive() throws TechnicalException {
+    public void testOnRequestFailBecauseApiKeyFoundButNotActive() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey invalidApiKey = new ApiKey();
         invalidApiKey.setRevoked(true);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(invalidApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
@@ -328,7 +327,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    public void testApiKey_notPropagatedBecauseNoConfig() throws TechnicalException {
+    public void testApiKey_notPropagatedBecauseNoConfig() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
@@ -336,19 +335,19 @@ public class ApiKeyPolicyTest {
         validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         (new ApiKeyPolicy(null)).onRequest(request, response, executionContext, policyChain);
 
         Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testApiKey_notPropagatedBecauseItsAsked() throws TechnicalException {
+    public void testApiKey_notPropagatedBecauseItsAsked() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
@@ -356,19 +355,19 @@ public class ApiKeyPolicyTest {
         validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         Assert.assertFalse(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
     @Test
-    public void testApiKey_propagated() throws TechnicalException {
+    public void testApiKey_propagated() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
 
         final ApiKey validApiKey = new ApiKey();
@@ -376,15 +375,15 @@ public class ApiKeyPolicyTest {
         validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
 
         when(request.headers()).thenReturn(headers);
-        when(executionContext.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+        when(executionContext.getComponent(ApiKeyCacheManager.class)).thenReturn(apiKeyCacheManager);
         when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
+        when(apiKeyCacheManager.get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
 
         when(apiKeyPolicyConfiguration.isPropagateApiKey()).thenReturn(true);
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         Assert.assertTrue(request.headers().contains(X_GRAVITEE_API_KEY));
-        verify(apiKeyRepository).findByKeyAndApi(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
+        verify(apiKeyCacheManager).get(API_KEY_HEADER_VALUE, API_NAME_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
 
