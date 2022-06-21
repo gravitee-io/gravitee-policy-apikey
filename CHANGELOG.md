@@ -1,3 +1,10 @@
+# [2.5.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.4.0...2.5.0) (2022-06-21)
+
+
+### Features
+
+* **jupiter:** move to Jupiter SecurityPolicy ([28d7be9](https://github.com/gravitee-io/gravitee-policy-apikey/commit/28d7be98ccc209c8c3388ae73c79b9552c0a809a))
+
 # [2.4.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.3.0...2.4.0) (2022-01-20)
 
 
