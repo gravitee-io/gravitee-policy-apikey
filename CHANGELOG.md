@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.5.0...2.6.0) (2022-06-28)
+
+
+### Features
+
+* use services instead of repositoryWrappers and validate subscription ([fd525cb](https://github.com/gravitee-io/gravitee-policy-apikey/commit/fd525cbfd0fcbd02d935f95653a863a341a6c032))
+
 # [2.5.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.4.0...2.5.0) (2022-06-21)
 
 
