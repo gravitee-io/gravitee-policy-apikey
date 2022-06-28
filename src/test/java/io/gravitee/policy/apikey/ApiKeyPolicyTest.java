@@ -26,13 +26,13 @@ import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.common.util.LinkedMultiValueMap;
 import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.http.HttpHeaders;
+import io.gravitee.gateway.api.service.ApiKey;
+import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.jupiter.api.context.Request;
 import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Response;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.repository.exceptions.TechnicalException;
-import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.model.ApiKey;
+import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.Completable;
 import io.reactivex.observers.TestObserver;
 import java.util.Date;
@@ -65,7 +65,7 @@ public class ApiKeyPolicyTest {
     private ApiKeyPolicyConfiguration configuration;
 
     @Mock
-    private ApiKeyRepository apiKeyRepository;
+    private ApiKeyService apiKeyService;
 
     @Mock
     private Request request;
@@ -80,7 +80,7 @@ public class ApiKeyPolicyTest {
     private Environment environment;
 
     @BeforeEach
-    void init() throws Exception {
+    void init() {
         ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
         ApiKeyPolicy.API_KEY_HEADER = null;
 
@@ -92,13 +92,13 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteWhenApiKeyIsValid() throws TechnicalException {
+    void shouldCompleteWhenApiKeyIsValid() {
         final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
         final ApiKey apiKey = buildApiKey();
 
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenReturn(headers);
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -114,12 +114,12 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() throws TechnicalException {
+    void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() {
         final ApiKey apiKey = buildApiKey();
 
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -128,14 +128,14 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenConfigurationIsNull() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenConfigurationIsNull() {
         final ApiKey apiKey = buildApiKey();
 
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
         when(request.headers()).thenReturn(mock(HttpHeaders.class));
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
 
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(null);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -146,14 +146,14 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() {
         final ApiKey apiKey = buildApiKey();
 
         when(configuration.isPropagateApiKey()).thenReturn(false);
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
         when(request.headers()).thenReturn(mock(HttpHeaders.class));
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -164,14 +164,14 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromHeaderWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromHeaderWhenPropagateApiKeyIsDisabled() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
         final ApiKey apiKey = buildApiKey();
 
         when(configuration.isPropagateApiKey()).thenReturn(false);
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -182,7 +182,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteWhenCustomHeader() throws TechnicalException {
+    void shouldCompleteWhenCustomHeader() {
         final String customHeader = "My-Custom-Api-Key";
 
         final HttpHeaders headers = buildHttpHeaders(customHeader);
@@ -191,7 +191,7 @@ public class ApiKeyPolicyTest {
         initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenReturn(headers);
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -202,7 +202,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() {
         final String customHeader = "My-Custom-Api-Key";
 
         final HttpHeaders headers = buildHttpHeaders(customHeader);
@@ -212,7 +212,7 @@ public class ApiKeyPolicyTest {
         when(configuration.isPropagateApiKey()).thenReturn(false);
         when(request.headers()).thenReturn(headers);
         when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -223,14 +223,14 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromQueryParamWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromQueryParamWhenPropagateApiKeyIsDisabled() {
         final ApiKey apiKey = buildApiKey();
         final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
 
         when(request.parameters()).thenReturn(parameters);
         when(configuration.isPropagateApiKey()).thenReturn(false);
         when(request.headers()).thenReturn(HttpHeaders.create());
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -241,7 +241,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteWhenCustomQueryParam() throws TechnicalException {
+    void shouldCompleteWhenCustomQueryParam() {
         final ApiKey apiKey = buildApiKey();
         final String customQueryParam = "My-Custom-Api-Key";
         final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
@@ -250,7 +250,7 @@ public class ApiKeyPolicyTest {
         when(request.parameters()).thenReturn(parameters);
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenReturn(HttpHeaders.create());
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -261,7 +261,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldCompleteAndRemoveApiKeyFromCustomQueryParamWhenPropagateApiKeyIsDisabled() throws TechnicalException {
+    void shouldCompleteAndRemoveApiKeyFromCustomQueryParamWhenPropagateApiKeyIsDisabled() {
         final ApiKey apiKey = buildApiKey();
         final String customQueryParam = "My-Custom-Api-Key";
         final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
@@ -270,7 +270,7 @@ public class ApiKeyPolicyTest {
         when(request.parameters()).thenReturn(parameters);
         when(configuration.isPropagateApiKey()).thenReturn(false);
         when(request.headers()).thenReturn(mock(HttpHeaders.class));
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
         final TestObserver<Void> obs = cut.onRequest(ctx).test();
@@ -299,7 +299,7 @@ public class ApiKeyPolicyTest {
                         "No API Key has been specified in headers (X-Gravitee-Api-Key) or query parameters (api-key).",
                         failure.message()
                     );
-                    assertEquals(API_KEY_MISSING_KEY, failure.key());
+                    assertEquals("API_KEY_MISSING", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
 
@@ -309,13 +309,13 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldInterruptWith401WhenApiKeyExpired() throws TechnicalException {
+    void shouldInterruptWith401WhenApiKeyExpired() {
         final ApiKey apiKey = buildApiKey();
         apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
 
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
         when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
@@ -328,7 +328,7 @@ public class ApiKeyPolicyTest {
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
                     assertEquals("API Key is not valid or is expired / revoked.", failure.message());
-                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
 
@@ -338,13 +338,13 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldInterruptWith401WhenApiKeyRevoked() throws TechnicalException {
+    void shouldInterruptWith401WhenApiKeyRevoked() {
         final ApiKey apiKey = buildApiKey();
         apiKey.setRevoked(true);
 
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockRepository(apiKey);
+        mockApiKeyService(apiKey);
         when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
@@ -357,7 +357,7 @@ public class ApiKeyPolicyTest {
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
                     assertEquals("API Key is not valid or is expired / revoked.", failure.message());
-                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
 
@@ -367,12 +367,12 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldInterruptWith401WhenApiKeyNotFound() throws TechnicalException {
+    void shouldInterruptWith401WhenApiKeyNotFound() {
         final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
 
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenReturn(headers);
-        mockRepository(null);
+        mockApiKeyService(null);
         when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
@@ -385,7 +385,7 @@ public class ApiKeyPolicyTest {
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
                     assertEquals("API Key is not valid or is expired / revoked.", failure.message());
-                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
 
@@ -395,7 +395,7 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldInterruptWith401WhenExceptionOccurred() throws TechnicalException {
+    void shouldInterruptWith401WhenExceptionOccurred() {
         when(configuration.isPropagateApiKey()).thenReturn(true);
         when(request.headers()).thenThrow(MOCK_EXCEPTION);
         when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
@@ -410,7 +410,7 @@ public class ApiKeyPolicyTest {
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
                     assertEquals("API Key is not valid or is expired / revoked.", failure.message());
-                    assertEquals(API_KEY_INVALID_KEY, failure.key());
+                    assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
 
@@ -466,7 +466,7 @@ public class ApiKeyPolicyTest {
     @Test
     void shouldNotValidateSubscription() {
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        assertFalse(cut.requireSubscription());
+        assertTrue(cut.requireSubscription());
     }
 
     @Test
@@ -501,10 +501,10 @@ public class ApiKeyPolicyTest {
         return parameters;
     }
 
-    private void mockRepository(ApiKey apiKey) throws TechnicalException {
-        when(ctx.getComponent(ApiKeyRepository.class)).thenReturn(apiKeyRepository);
+    private void mockApiKeyService(ApiKey apiKey) {
+        when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
         when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.ofNullable(apiKey));
+        when(apiKeyService.getByApiAndKey(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
     }
 
     private void initializeParamNames(String apiKeyHeaderName, String apiKeyQueryParameterName) {

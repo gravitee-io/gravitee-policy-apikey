@@ -15,19 +15,19 @@
  */
 package io.gravitee.policy.apikey;
 
+import static io.gravitee.common.http.HttpStatusCode.UNAUTHORIZED_401;
 import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
 
 import io.gravitee.common.http.GraviteeHttpHeader;
 import io.gravitee.common.http.HttpStatusCode;
+import io.gravitee.gateway.api.service.ApiKey;
+import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.jupiter.api.ExecutionFailure;
-import io.gravitee.gateway.jupiter.api.context.ExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Request;
 import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.policy.SecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
-import io.gravitee.repository.management.api.ApiKeyRepository;
-import io.gravitee.repository.management.model.ApiKey;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import java.util.Date;
@@ -46,9 +46,6 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
     static final String ATTR_API_KEY = ATTR_PREFIX + "api-key";
     static final String ATTR_INTERNAL_API_KEY = ATTR_INTERNAL_PREFIX + "api-key";
-
-    protected static final String API_KEY_MISSING_KEY = "API_KEY_MISSING";
-    protected static final String API_KEY_INVALID_KEY = "API_KEY_INVALID";
 
     static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
@@ -83,13 +80,18 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
     /**
      * {@inheritDoc}
-     * Do not validate the subscription because the api key already has everything needed to check expiration.
+     * Validate the subscription, as a valid shared API key can be linked to a closed or expired subscription.
      *
-     * @return <code>false</code>, indicating that the subscription must not be validated as it is already performed.
+     * @return <code>true</code>, indicating that the subscription must be validated.
      */
     @Override
     public boolean requireSubscription() {
-        return false;
+        return true;
+    }
+
+    @Override
+    public Completable onInvalidSubscription(RequestExecutionContext ctx) {
+        return ctx.interruptWith(new ExecutionFailure(UNAUTHORIZED_401).key(API_KEY_INVALID_KEY).message(API_KEY_INVALID_MESSAGE));
     }
 
     /**
@@ -123,8 +125,8 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
                     }
 
                     final Optional<ApiKey> apiKeyOpt = ctx
-                        .getComponent(ApiKeyRepository.class)
-                        .findByKeyAndApi(requestApiKey.get(), ctx.getAttribute(ATTR_API));
+                        .getComponent(ApiKeyService.class)
+                        .getByApiAndKey(ctx.getAttribute(ATTR_API), requestApiKey.get());
 
                     if (apiKeyOpt.isPresent()) {
                         ApiKey apiKey = apiKeyOpt.get();
