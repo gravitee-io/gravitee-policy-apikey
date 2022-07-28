@@ -16,9 +16,10 @@
 package io.gravitee.policy.apikey;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static io.gravitee.gateway.jupiter.api.policy.SecurityToken.TokenType.API_KEY;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 import io.gravitee.apim.gateway.tests.sdk.AbstractPolicyTest;
@@ -32,6 +33,7 @@ import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.api.service.Subscription;
 import io.gravitee.gateway.api.service.SubscriptionService;
+import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.reactivex.observers.TestObserver;
 import io.vertx.reactivex.core.buffer.Buffer;
@@ -44,12 +46,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.stubbing.OngoingStubbing;
 
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Disabled("Disabled because failing on CCI. There is a dependency loop with the SDK and the policy.")
 @GatewayTest
 @DeployApi("/apis/api-key.json")
 public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
@@ -58,7 +60,6 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
     protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
         super.configureGateway(gatewayConfigurationBuilder);
         gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "true");
-        gatewayConfigurationBuilder.set("http.instances", "1");
     }
 
     /**
@@ -104,7 +105,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         final ApiKey apiKey = fakeApiKeyFromCache();
 
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
-        when(getBean(SubscriptionService.class).getById(any())).thenReturn(Optional.empty());
+        when(getBean(SubscriptionService.class).getByApiAndSecurityToken(any(), any(), any())).thenReturn(Optional.empty());
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
 
@@ -112,7 +113,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
             .assertComplete()
             .assertValue(response -> {
                 assertThat(response.statusCode()).isEqualTo(401);
-                assertThat(response.bodyAsString()).isEqualTo("API Key is not valid or is expired / revoked.");
+                assertUnauthorizedResponseBody(response.bodyAsString());
                 return true;
             })
             .assertNoErrors();
@@ -128,7 +129,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         final ApiKey apiKey = fakeApiKeyFromCache();
 
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
-        when(getBean(SubscriptionService.class).getById(any())).thenReturn(Optional.of(fakeSubscriptionFromCache(true)));
+        whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(true)));
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
 
@@ -136,7 +137,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
             .assertComplete()
             .assertValue(response -> {
                 assertThat(response.statusCode()).isEqualTo(401);
-                assertThat(response.bodyAsString()).isEqualTo("API Key is not valid or is expired / revoked.");
+                assertUnauthorizedResponseBody(response.bodyAsString());
                 return true;
             })
             .assertNoErrors();
@@ -152,8 +153,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         final ApiKey apiKey = fakeApiKeyFromCache();
 
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
-        when(getBean(SubscriptionService.class).getById(apiKey.getSubscription()))
-            .thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
+        whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
 
@@ -177,7 +177,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         final ApiKey apiKey = fakeApiKeyFromCache();
 
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
-        when(getBean(SubscriptionService.class).getById("subscription-id")).thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
+        whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
 
         final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").addQueryParam("api-key", "apiKeyValue").rxSend().test();
 
@@ -199,10 +199,11 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
      */
     private ApiKey fakeApiKeyFromCache() {
         final ApiKey apiKey = new ApiKey();
+        apiKey.setApi("my-api");
         apiKey.setApplication("application-id");
         apiKey.setSubscription("subscription-id");
         apiKey.setPlan("plan-id");
-        apiKey.setKey("key-id");
+        apiKey.setKey("apiKeyValue");
         return apiKey;
     }
 
@@ -219,5 +220,22 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
             subscription.setEndingAt(new Date(Instant.now().minus(1, HOURS).toEpochMilli()));
         }
         return subscription;
+    }
+
+    protected void assertUnauthorizedResponseBody(String responseBody) {
+        assertThat(responseBody).isEqualTo("Unauthorized");
+    }
+
+    protected OngoingStubbing<Optional<Subscription>> whenSearchingSubscription(ApiKey apiKey) {
+        return when(
+            getBean(SubscriptionService.class)
+                .getByApiAndSecurityToken(eq(apiKey.getApi()), securityTokenMatcher(apiKey.getKey()), eq(apiKey.getPlan()))
+        );
+    }
+
+    private SecurityToken securityTokenMatcher(String apiKeyValue) {
+        return argThat(securityToken ->
+            securityToken.getTokenType().equals(API_KEY.name()) && securityToken.getTokenValue().equals(apiKeyValue)
+        );
     }
 }

@@ -18,6 +18,7 @@ package io.gravitee.policy.apikey;
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
 import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
+import static io.gravitee.gateway.jupiter.api.policy.SecurityToken.TokenType.API_KEY;
 import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,8 +32,8 @@ import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.jupiter.api.context.Request;
 import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Response;
+import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.Completable;
 import io.reactivex.observers.TestObserver;
 import java.util.Date;
@@ -420,47 +421,53 @@ public class ApiKeyPolicyTest {
     }
 
     @Test
-    void shouldReturnCanHandleWhenApiKeyInternalAttributeIsFound() {
+    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyInternalAttributeIsFound() {
         when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Boolean> obs = cut.support(ctx).test();
+        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        obs.assertResult(true);
+        obs.assertValue(token ->
+            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+        );
     }
 
     @Test
-    void shouldReturnCanHandleWhenApiKeyHeaderIsFound() {
+    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyHeaderIsFound() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
         when(request.headers()).thenReturn(headers);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Boolean> obs = cut.support(ctx).test();
+        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        obs.assertResult(true);
+        obs.assertValue(token ->
+            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+        );
     }
 
     @Test
-    void shouldReturnCanHandleWhenApiKeyQueryParamIsFound() {
+    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyQueryParamIsFound() {
         final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
         when(request.headers()).thenReturn(HttpHeaders.create());
         when(request.parameters()).thenReturn(parameters);
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Boolean> obs = cut.support(ctx).test();
+        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        obs.assertResult(true);
+        obs.assertValue(token ->
+            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+        );
     }
 
     @Test
-    void shouldReturnCannotHandleWhenNoApiKeyIsFound() {
+    void extractSecurityToken_shouldReturnEmpty_whenNoApiKeyIsFound() {
         when(request.headers()).thenReturn(HttpHeaders.create());
         when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
 
         final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Boolean> obs = cut.support(ctx).test();
+        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        obs.assertResult(false);
+        obs.assertComplete().assertValueCount(0);
     }
 
     @Test
