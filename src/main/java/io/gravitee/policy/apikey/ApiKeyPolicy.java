@@ -15,7 +15,6 @@
  */
 package io.gravitee.policy.apikey;
 
-import static io.gravitee.common.http.HttpStatusCode.UNAUTHORIZED_401;
 import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
 
 import io.gravitee.common.http.GraviteeHttpHeader;
@@ -28,10 +27,11 @@ import io.gravitee.gateway.jupiter.api.context.HttpRequest;
 import io.gravitee.gateway.jupiter.api.context.MessageExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.policy.SecurityPolicy;
+import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.Completable;
-import io.reactivex.Single;
+import io.reactivex.Maybe;
 import java.util.Date;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -64,17 +64,14 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         return "api-key";
     }
 
-    /**
-     * {@inheritDoc}
-     * The {@link ApiKeyPolicy} is assignable if an api key is passed in the request headers.
-     */
     @Override
-    public Single<Boolean> support(HttpExecutionContext ctx) {
-        final Optional<String> optApiKey = extractApiKey(ctx);
-
-        optApiKey.ifPresent(apiKey -> ctx.setInternalAttribute(ATTR_INTERNAL_API_KEY, apiKey));
-
-        return Single.just(optApiKey.isPresent());
+    public Maybe<SecurityToken> extractSecurityToken(HttpExecutionContext ctx) {
+        final Optional<String> apiKey = extractApiKey(ctx);
+        if (apiKey.isPresent()) {
+            ctx.setInternalAttribute(ATTR_INTERNAL_API_KEY, apiKey.get());
+            return Maybe.just(SecurityToken.forApiKey(apiKey.get()));
+        }
+        return Maybe.empty();
     }
 
     /**
@@ -86,11 +83,6 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
     @Override
     public boolean requireSubscription() {
         return true;
-    }
-
-    @Override
-    public Completable onInvalidSubscription(HttpExecutionContext ctx) {
-        return ctx.interruptWith(new ExecutionFailure(UNAUTHORIZED_401).key(API_KEY_INVALID_KEY).message(API_KEY_INVALID_MESSAGE));
     }
 
     /**
@@ -191,7 +183,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         if (!propagateApiKey) {
             ctx.request().headers().remove(API_KEY_HEADER);
             ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
-            ctx.removeInternalAttribute(ATTR_INTERNAL_API_KEY);
         }
+        ctx.removeInternalAttribute(ATTR_INTERNAL_API_KEY);
     }
 }
