@@ -28,6 +28,7 @@ public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyIntegrationTest {
 
     @Override
     protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
+        super.configureGateway(gatewayConfigurationBuilder);
         gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "false");
     }
 
