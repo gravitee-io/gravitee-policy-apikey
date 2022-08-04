@@ -23,7 +23,9 @@ import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.jupiter.api.ExecutionFailure;
-import io.gravitee.gateway.jupiter.api.context.Request;
+import io.gravitee.gateway.jupiter.api.context.HttpExecutionContext;
+import io.gravitee.gateway.jupiter.api.context.HttpRequest;
+import io.gravitee.gateway.jupiter.api.context.MessageExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.policy.SecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
@@ -42,17 +44,14 @@ import org.slf4j.LoggerFactory;
  */
 public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
-    private static final Logger log = LoggerFactory.getLogger(ApiKeyPolicy.class);
-
     static final String ATTR_API_KEY = ATTR_PREFIX + "api-key";
     static final String ATTR_INTERNAL_API_KEY = ATTR_INTERNAL_PREFIX + "api-key";
-
-    static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
     static final String DEFAULT_API_KEY_HEADER_PARAMETER = GraviteeHttpHeader.X_GRAVITEE_API_KEY;
-
+    private static final Logger log = LoggerFactory.getLogger(ApiKeyPolicy.class);
+    static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
     private final boolean propagateApiKey;
 
     public ApiKeyPolicy(ApiKeyPolicyConfiguration configuration) {
@@ -70,7 +69,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
      * The {@link ApiKeyPolicy} is assignable if an api key is passed in the request headers.
      */
     @Override
-    public Single<Boolean> support(RequestExecutionContext ctx) {
+    public Single<Boolean> support(HttpExecutionContext ctx) {
         final Optional<String> optApiKey = extractApiKey(ctx);
 
         optApiKey.ifPresent(apiKey -> ctx.setInternalAttribute(ATTR_INTERNAL_API_KEY, apiKey));
@@ -90,7 +89,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
     }
 
     @Override
-    public Completable onInvalidSubscription(RequestExecutionContext ctx) {
+    public Completable onInvalidSubscription(HttpExecutionContext ctx) {
         return ctx.interruptWith(new ExecutionFailure(UNAUTHORIZED_401).key(API_KEY_INVALID_KEY).message(API_KEY_INVALID_MESSAGE));
     }
 
@@ -105,7 +104,16 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
     }
 
     @Override
-    public Completable onRequest(RequestExecutionContext ctx) {
+    public Completable onRequest(final RequestExecutionContext ctx) {
+        return handleSecurity(ctx);
+    }
+
+    @Override
+    public Completable onMessageRequest(final MessageExecutionContext ctx) {
+        return handleSecurity(ctx);
+    }
+
+    private Completable handleSecurity(final HttpExecutionContext ctx) {
         return Completable
             .defer(() -> {
                 try {
@@ -150,22 +158,22 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
             .doOnTerminate(() -> cleanupApiKey(ctx));
     }
 
-    private boolean isApiKeyValid(RequestExecutionContext ctx, ApiKey apiKey) {
+    private boolean isApiKeyValid(HttpExecutionContext ctx, ApiKey apiKey) {
         return !apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(ctx.request().timestamp())));
     }
 
-    private Completable interrupt401(RequestExecutionContext ctx, String key, String message) {
+    private Completable interrupt401(HttpExecutionContext ctx, String key, String message) {
         return ctx.interruptWith(new ExecutionFailure(HttpStatusCode.UNAUTHORIZED_401).key(key).message(message));
     }
 
-    private Optional<String> extractApiKey(RequestExecutionContext ctx) {
+    private Optional<String> extractApiKey(HttpExecutionContext ctx) {
         // 1_ First, check if already resolved.
         String apiKey = ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY);
         if (apiKey != null) {
             return Optional.of(apiKey);
         }
 
-        final Request request = ctx.request();
+        final HttpRequest request = ctx.request();
 
         // 2_ Second, search in HTTP headers
         apiKey = request.headers().get(API_KEY_HEADER);
@@ -179,7 +187,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         return Optional.ofNullable(apiKey);
     }
 
-    private void cleanupApiKey(RequestExecutionContext ctx) {
+    private void cleanupApiKey(HttpExecutionContext ctx) {
         if (!propagateApiKey) {
             ctx.request().headers().remove(API_KEY_HEADER);
             ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
