@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.6.0...2.7.0) (2022-08-08)
+
+
+### Features
+
+* **sme:** update security policy to be compatible with async reactor ([0aefffe](https://github.com/gravitee-io/gravitee-policy-apikey/commit/0aefffee035173aab12194d90adbf5ba01950410))
+
 # [2.6.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.5.0...2.6.0) (2022-06-28)
 
 
