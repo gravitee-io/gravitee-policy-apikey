@@ -1,3 +1,10 @@
+# [2.8.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.7.0...2.8.0) (2022-08-16)
+
+
+### Features
+
+* migrate to the new version of Jupiter's SecurityPolicy ([467fab6](https://github.com/gravitee-io/gravitee-policy-apikey/commit/467fab65d7ad1212da15841b2f0c683db158eadd))
+
 # [2.7.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.6.0...2.7.0) (2022-08-08)
 
 
