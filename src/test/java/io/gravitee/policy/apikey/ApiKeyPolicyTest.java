@@ -18,7 +18,6 @@ package io.gravitee.policy.apikey;
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
 import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
-import static io.gravitee.gateway.jupiter.api.policy.SecurityToken.TokenType.API_KEY;
 import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -29,8 +28,8 @@ import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
+import io.gravitee.gateway.jupiter.api.context.HttpExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Request;
-import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Response;
 import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
@@ -75,7 +74,7 @@ public class ApiKeyPolicyTest {
     private Response response;
 
     @Mock
-    private RequestExecutionContext ctx;
+    private HttpExecutionContext ctx;
 
     @Mock
     private Environment environment;
