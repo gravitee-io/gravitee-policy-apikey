@@ -17,7 +17,6 @@ package io.gravitee.policy.apikey;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
-import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
 import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -28,6 +27,7 @@ import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
+import io.gravitee.gateway.jupiter.api.context.ContextAttributes;
 import io.gravitee.gateway.jupiter.api.context.HttpExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.Request;
 import io.gravitee.gateway.jupiter.api.context.Response;
@@ -105,9 +105,9 @@ public class ApiKeyPolicyTest {
 
         obs.assertResult();
 
-        verify(ctx).setAttribute(ATTR_APPLICATION, apiKey.getApplication());
-        verify(ctx).setAttribute(ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
-        verify(ctx).setAttribute(ATTR_PLAN, apiKey.getPlan());
+        verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+        verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+        verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
         verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
 
         assertEquals(API_KEY, headers.get(X_GRAVITEE_API_KEY));

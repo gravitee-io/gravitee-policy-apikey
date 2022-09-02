@@ -46,7 +46,7 @@
         <maven-assembly-plugin.version>2.6</maven-assembly-plugin.version>
         <!-- Property used by the publication job in CI-->
         <publish-folder-path>graviteeio-apim/plugins/policies</publish-folder-path>
-        <gravitee-apim-gateway-tests-sdk.version>3.19.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
+        <gravitee-apim-gateway-tests-sdk.version>3.20.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
         <gravitee-node-api.version>1.21.0</gravitee-node-api.version>
         <gravitee-node.version>1.24.2</gravitee-node.version>
         <gravitee-common.version>1.27.0</gravitee-common.version>
