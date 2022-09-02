@@ -15,16 +15,14 @@
  */
 package io.gravitee.policy.apikey;
 
-import static io.gravitee.gateway.jupiter.api.context.ExecutionContext.*;
-
 import io.gravitee.common.http.GraviteeHttpHeader;
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.jupiter.api.ExecutionFailure;
+import io.gravitee.gateway.jupiter.api.context.ContextAttributes;
 import io.gravitee.gateway.jupiter.api.context.HttpExecutionContext;
 import io.gravitee.gateway.jupiter.api.context.HttpRequest;
-import io.gravitee.gateway.jupiter.api.context.MessageExecutionContext;
 import io.gravitee.gateway.jupiter.api.policy.SecurityPolicy;
 import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
@@ -43,8 +41,8 @@ import org.slf4j.LoggerFactory;
  */
 public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
-    static final String ATTR_API_KEY = ATTR_PREFIX + "api-key";
-    static final String ATTR_INTERNAL_API_KEY = ATTR_INTERNAL_PREFIX + "api-key";
+    static final String ATTR_API_KEY = ContextAttributes.ATTR_PREFIX + "api-key";
+    static final String ATTR_INTERNAL_API_KEY = "api-key";
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
@@ -120,15 +118,15 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
                     final Optional<ApiKey> apiKeyOpt = ctx
                         .getComponent(ApiKeyService.class)
-                        .getByApiAndKey(ctx.getAttribute(ATTR_API), requestApiKey.get());
+                        .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), requestApiKey.get());
 
                     if (apiKeyOpt.isPresent()) {
                         ApiKey apiKey = apiKeyOpt.get();
 
                         // Add data about api-key, plan, application and subscription into the execution context.
-                        ctx.setAttribute(ATTR_APPLICATION, apiKey.getApplication());
-                        ctx.setAttribute(ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
-                        ctx.setAttribute(ATTR_PLAN, apiKey.getPlan());
+                        ctx.setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+                        ctx.setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+                        ctx.setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
                         ctx.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
                         if (isApiKeyValid(ctx, apiKey)) {
