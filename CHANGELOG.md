@@ -1,3 +1,15 @@
+# [2.9.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.8.0...2.9.0) (2022-09-05)
+
+
+### Bug Fixes
+
+* plan selection for v3 engine ([6c6ae89](https://github.com/gravitee-io/gravitee-policy-apikey/commit/6c6ae894a6a96152cbb9f8ba89eeb3f2981f8890))
+
+
+### Features
+
+* improve execution context structure ([20fd71a](https://github.com/gravitee-io/gravitee-policy-apikey/commit/20fd71a48b2bb663e207159aa02fd87e37e74a9b)), closes [gravitee-io/issues#8386](https://github.com/gravitee-io/issues/issues/8386)
+
 # [2.8.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.7.0...2.8.0) (2022-08-16)
 
 
