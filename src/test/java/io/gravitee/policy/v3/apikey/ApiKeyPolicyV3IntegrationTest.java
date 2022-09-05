@@ -15,7 +15,6 @@
  */
 package io.gravitee.policy.v3.apikey;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import io.gravitee.apim.gateway.tests.sdk.configuration.GatewayConfigurationBuilder;
@@ -26,14 +25,11 @@ import io.gravitee.gateway.api.service.Subscription;
 import io.gravitee.gateway.api.service.SubscriptionService;
 import io.gravitee.policy.apikey.ApiKeyPolicyIntegrationTest;
 import java.util.Optional;
-import org.junit.jupiter.api.Disabled;
-import org.mockito.stubbing.OngoingStubbing;
 
 /**
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Disabled("Temporary disabled to make build pass and waiting for a new version of tests-sdk")
 public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyIntegrationTest {
 
     @Override
@@ -46,25 +42,5 @@ public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyIntegrationTest {
     public void configureApi(Api api) {
         super.configureApi(api);
         api.setExecutionMode(ExecutionMode.V3);
-    }
-
-    /**
-     * This overrides subscription search :
-     * - in jupiter its searched with getByApiAndSecurityToken
-     * - in V3 its searches with getById
-     */
-    @Override
-    protected OngoingStubbing<Optional<Subscription>> whenSearchingSubscription(ApiKey apiKey) {
-        return when(getBean(SubscriptionService.class).getById(apiKey.getSubscription()));
-    }
-
-    /**
-     * This overrides 401 response HTTP body content assertion :
-     * - in jupiter, it's "unauthorized"
-     * - in V3, it contains more information
-     */
-    @Override
-    protected void assertUnauthorizedResponseBody(String responseBody) {
-        assertThat(responseBody).isEqualTo("API Key is not valid or is expired / revoked.");
     }
 }
