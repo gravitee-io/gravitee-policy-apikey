@@ -54,7 +54,6 @@ import org.mockito.stubbing.OngoingStubbing;
  */
 @GatewayTest
 @DeployApi("/apis/api-key.json")
-@Disabled("Temporary disabled to make build pass and waiting for a new version of tests-sdk")
 public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
 
     @Override

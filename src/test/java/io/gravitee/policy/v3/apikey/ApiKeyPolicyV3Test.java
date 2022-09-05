@@ -209,29 +209,6 @@ public class ApiKeyPolicyV3Test {
     }
 
     @Test
-    @Disabled
-    void testOnRequest_withUnexpiredKeyAndBadApi() {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
-        final ApiKey validApiKey = new ApiKey();
-        validApiKey.setRevoked(false);
-        validApiKey.setExpireAt(new Date());
-        validApiKey.setPlan(PLAN_NAME_HEADER_VALUE);
-
-        Instant requestDate = validApiKey.getExpireAt().toInstant().minus(Duration.ofHours(1));
-
-        when(request.headers()).thenReturn(headers);
-        when(request.timestamp()).thenReturn(requestDate.toEpochMilli());
-        when(executionContext.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
-        when(executionContext.getAttribute(ExecutionContext.ATTR_API)).thenReturn(API_NAME_HEADER_VALUE);
-        when(apiKeyService.getByApiAndKey(API_NAME_HEADER_VALUE, API_KEY_HEADER_VALUE)).thenReturn(Optional.of(validApiKey));
-
-        apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
-
-        verify(apiKeyService).getByApiAndKey(API_NAME_HEADER_VALUE, API_KEY_HEADER_VALUE);
-        verify(policyChain, times(0)).doNext(request, response);
-    }
-
-    @Test
     void testOnRequest_withExpiredKey() {
         final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY, API_KEY_HEADER_VALUE);
         final ApiKey validApiKey = new ApiKey();
