@@ -1,3 +1,15 @@
+# [3.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.9.0...3.0.0-alpha.1) (2022-10-20)
+
+
+### chore
+
+* bump to rxJava ([bae3eff](https://github.com/gravitee-io/gravitee-policy-apikey/commit/bae3eff93cee5ce07e6c2f8e2bbbda59ce91327f))
+
+
+### BREAKING CHANGES
+
+* rxJava3 required
+
 # [2.9.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.8.0...2.9.0) (2022-09-05)
 
 
