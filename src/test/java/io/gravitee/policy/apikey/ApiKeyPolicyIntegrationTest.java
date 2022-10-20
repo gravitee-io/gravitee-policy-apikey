@@ -17,6 +17,7 @@ package io.gravitee.policy.apikey;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static io.gravitee.gateway.jupiter.api.policy.SecurityToken.TokenType.API_KEY;
+import static io.vertx.core.http.HttpMethod.GET;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -35,10 +36,14 @@ import io.gravitee.gateway.api.service.Subscription;
 import io.gravitee.gateway.api.service.SubscriptionService;
 import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.reactivex.observers.TestObserver;
-import io.vertx.reactivex.core.buffer.Buffer;
-import io.vertx.reactivex.ext.web.client.HttpResponse;
-import io.vertx.reactivex.ext.web.client.WebClient;
+import io.reactivex.rxjava3.observers.TestObserver;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.RequestOptions;
+import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.rxjava3.core.http.HttpClient;
+import io.vertx.rxjava3.core.http.HttpClientRequest;
+import io.vertx.rxjava3.ext.web.client.HttpResponse;
+import io.vertx.rxjava3.ext.web.client.WebClient;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
@@ -80,16 +85,21 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
 
     @Test
     @DisplayName("Should receive 401 - Unauthorized when calling without an API-Key")
-    void shouldGet401IfNoApiKey(WebClient client) {
+    void shouldGet401IfNoApiKey(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
-        final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").rxSend().test();
-
-        awaitTerminalEvent(obs)
-            .assertComplete()
-            .assertValue(response -> {
+        client
+            .rxRequest(GET, "/test")
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
                 assertThat(response.statusCode()).isEqualTo(401);
-                assertThat(response.bodyAsString()).isEqualTo("Unauthorized");
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertThat(body.toString()).isEqualTo("Unauthorized");
                 return true;
             })
             .assertNoErrors();
@@ -99,7 +109,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
 
     @Test
     @DisplayName("Should receive 401 - Unauthorized when calling with an API key, without subscription")
-    void shouldGet401IfNoSubscription(WebClient client) {
+    void shouldGet401IfNoSubscription(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
         final ApiKey apiKey = fakeApiKeyFromCache();
@@ -107,13 +117,18 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
         when(getBean(SubscriptionService.class).getByApiAndSecurityToken(any(), any(), any())).thenReturn(Optional.empty());
 
-        final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
-
-        awaitTerminalEvent(obs)
-            .assertComplete()
-            .assertValue(response -> {
+        client
+            .rxRequest(new RequestOptions().setMethod(GET).setURI("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue"))
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
                 assertThat(response.statusCode()).isEqualTo(401);
-                assertUnauthorizedResponseBody(response.bodyAsString());
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertUnauthorizedResponseBody(body.toString());
                 return true;
             })
             .assertNoErrors();
@@ -123,7 +138,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
 
     @Test
     @DisplayName("Should receive 401 - Unauthorized when calling with an API key, with expired subscription")
-    void shouldGet401IfExpiredSubscription(WebClient client) {
+    void shouldGet401IfExpiredSubscription(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
         final ApiKey apiKey = fakeApiKeyFromCache();
@@ -131,13 +146,18 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
         whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(true)));
 
-        final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
-
-        awaitTerminalEvent(obs)
-            .assertComplete()
-            .assertValue(response -> {
+        client
+            .rxRequest(new RequestOptions().setMethod(GET).setURI("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue"))
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
                 assertThat(response.statusCode()).isEqualTo(401);
-                assertUnauthorizedResponseBody(response.bodyAsString());
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertUnauthorizedResponseBody(body.toString());
                 return true;
             })
             .assertNoErrors();
@@ -147,7 +167,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
 
     @Test
     @DisplayName("Should access API with API-Key header")
-    void shouldAccessApiWithApiKeyHeader(WebClient client) {
+    void shouldAccessApiWithApiKeyHeader(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
         final ApiKey apiKey = fakeApiKeyFromCache();
@@ -155,13 +175,18 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
         whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
 
-        final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue").rxSend().test();
-
-        awaitTerminalEvent(obs)
-            .assertComplete()
-            .assertValue(response -> {
+        client
+            .rxRequest(new RequestOptions().setMethod(GET).setURI("/test").putHeader("X-Gravitee-Api-Key", "apiKeyValue"))
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
                 assertThat(response.statusCode()).isEqualTo(200);
-                assertThat(response.bodyAsString()).isEqualTo("response from backend");
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertThat(body.toString()).isEqualTo("response from backend");
                 return true;
             })
             .assertNoErrors();
@@ -171,7 +196,7 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
 
     @Test
     @DisplayName("Should access API with API-Key query param")
-    void shouldAccessApiWithApiKeyQueryParam(WebClient client) {
+    void shouldAccessApiWithApiKeyQueryParam(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
         final ApiKey apiKey = fakeApiKeyFromCache();
@@ -179,13 +204,18 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         when(getBean(ApiKeyService.class).getByApiAndKey(any(), any())).thenReturn(Optional.of(apiKey));
         whenSearchingSubscription(apiKey).thenReturn(Optional.of(fakeSubscriptionFromCache(false)));
 
-        final TestObserver<HttpResponse<Buffer>> obs = client.get("/test").addQueryParam("api-key", "apiKeyValue").rxSend().test();
-
-        awaitTerminalEvent(obs)
-            .assertComplete()
-            .assertValue(response -> {
+        client
+            .rxRequest(new RequestOptions().setMethod(GET).setURI("/test?api-key=apiKeyValue"))
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
                 assertThat(response.statusCode()).isEqualTo(200);
-                assertThat(response.bodyAsString()).isEqualTo("response from backend");
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertThat(body.toString()).isEqualTo("response from backend");
                 return true;
             })
             .assertNoErrors();
