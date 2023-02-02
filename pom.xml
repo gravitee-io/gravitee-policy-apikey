@@ -34,11 +34,12 @@
     </parent>
 
     <properties>
-        <gravitee-apim-gateway-tests-sdk.version>3.20.0-alpha.2-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
+        <gravitee-apim-gateway-tests-sdk.version>3.21.0-SNAPSHOT</gravitee-apim-gateway-tests-sdk.version>
         <gravitee-bom.version>2.7</gravitee-bom.version>
         <gravitee-connector-api.version>1.1.0</gravitee-connector-api.version>
         <gravitee-expression-language.version>2.0.0</gravitee-expression-language.version>
-        <gravitee-gateway-api.version>2.0.0</gravitee-gateway-api.version>
+        <gravitee-gateway-api.version>2.1.0-alpha.11</gravitee-gateway-api.version>
+        <gravitee-reporter-api.version>1.25.0-alpha.4</gravitee-reporter-api.version>
         <gravitee-policy-api.version>1.11.0</gravitee-policy-api.version>
         <gravitee-node.version>2.0.1</gravitee-node.version>
         <gravitee-common.version>2.0.0</gravitee-common.version>
@@ -88,6 +89,11 @@
                 <version>${gravitee-gateway-api.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.gravitee.reporter</groupId>
+                <artifactId>gravitee-reporter-api</artifactId>
+                <version>${gravitee-reporter-api.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.gravitee.connector</groupId>
                 <artifactId>gravitee-connector-api</artifactId>
                 <version>${gravitee-connector-api.version}</version>
@@ -105,6 +111,12 @@
         <dependency>
             <groupId>io.gravitee.gateway</groupId>
             <artifactId>gravitee-gateway-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.gravitee.reporter</groupId>
+            <artifactId>gravitee-reporter-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
