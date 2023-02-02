@@ -1,3 +1,10 @@
+## [3.0.1-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.0.0...3.0.1-alpha.1) (2023-02-02)
+
+
+### Bug Fixes
+
+* bump gateway api version ([dfbb801](https://github.com/gravitee-io/gravitee-policy-apikey/commit/dfbb8012b3416d3546d76d412a26c9bae9ead1f5))
+
 # [3.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/2.9.0...3.0.0) (2022-12-09)
 
 
