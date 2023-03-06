@@ -16,7 +16,7 @@
 package io.gravitee.policy.apikey;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static io.gravitee.gateway.jupiter.api.policy.SecurityToken.TokenType.API_KEY;
+import static io.gravitee.gateway.reactive.api.policy.SecurityToken.TokenType.API_KEY;
 import static io.vertx.core.http.HttpMethod.GET;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +34,7 @@ import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.api.service.Subscription;
 import io.gravitee.gateway.api.service.SubscriptionService;
-import io.gravitee.gateway.jupiter.api.policy.SecurityToken;
+import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.vertx.core.http.HttpMethod;
