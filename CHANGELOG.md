@@ -1,3 +1,16 @@
+# [3.1.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.0.0...3.1.0) (2023-03-17)
+
+
+### Bug Fixes
+
+* bump gateway api version ([54d0574](https://github.com/gravitee-io/gravitee-policy-apikey/commit/54d0574430ce97b8fbe90b08c4c71ce76eaaf6c7))
+* **deps:** upgrade gravitee-bom & alpha version ([c7a40da](https://github.com/gravitee-io/gravitee-policy-apikey/commit/c7a40dade036aaa2b7c1964dd149081e9b334c95))
+
+
+### Features
+
+* rename 'jupiter' package in 'reactive' ([23129d3](https://github.com/gravitee-io/gravitee-policy-apikey/commit/23129d3364739219c3935d4720a5ba0193a8bf44))
+
 # [3.1.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.0.1-alpha.1...3.1.0-alpha.1) (2023-03-13)
 
 
