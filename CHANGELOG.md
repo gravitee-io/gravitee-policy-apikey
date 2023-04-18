@@ -1,3 +1,10 @@
+## [3.1.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.1.0...3.1.1) (2023-04-18)
+
+
+### Bug Fixes
+
+* clean schema-form to make it compatible with gio-form-json-schema component ([3cbd317](https://github.com/gravitee-io/gravitee-policy-apikey/commit/3cbd3178df2dd3297f2dce702bf800d28e2eb4b4))
+
 # [3.1.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.0.0...3.1.0) (2023-03-17)
 
 
