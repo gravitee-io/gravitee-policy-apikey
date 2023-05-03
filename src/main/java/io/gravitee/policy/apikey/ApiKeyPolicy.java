@@ -120,6 +120,9 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
                         .getComponent(ApiKeyService.class)
                         .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), requestApiKey.get());
 
+                    // Always set the apikey into the context
+                    ctx.setAttribute(ATTR_API_KEY, requestApiKey.get());
+
                     if (apiKeyOpt.isPresent()) {
                         ApiKey apiKey = apiKeyOpt.get();
 

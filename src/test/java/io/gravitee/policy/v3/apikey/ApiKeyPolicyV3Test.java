@@ -83,8 +83,6 @@ public class ApiKeyPolicyV3Test {
     @BeforeEach
     void init() {
         apiKeyPolicy = new ApiKeyPolicy(apiKeyPolicyConfiguration);
-        ApiKeyPolicyV3.API_KEY_QUERY_PARAMETER = null;
-        ApiKeyPolicyV3.API_KEY_HEADER = null;
         lenient().when(executionContext.getComponent(Environment.class)).thenReturn(environment);
         lenient()
             .when(environment.getProperty(eq(ApiKeyPolicyV3.API_KEY_HEADER_PROPERTY), anyString()))
@@ -109,6 +107,7 @@ public class ApiKeyPolicyV3Test {
 
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
+        verify(executionContext).setAttribute(ApiKeyPolicyV3.ATTR_API_KEY, API_KEY_HEADER_VALUE);
         verify(apiKeyService).getByApiAndKey(API_NAME_HEADER_VALUE, API_KEY_HEADER_VALUE);
         verify(policyChain).doNext(request, response);
     }
@@ -227,6 +226,7 @@ public class ApiKeyPolicyV3Test {
         apiKeyPolicy.onRequest(request, response, executionContext, policyChain);
 
         verify(apiKeyService).getByApiAndKey(API_NAME_HEADER_VALUE, API_KEY_HEADER_VALUE);
+        verify(executionContext).setAttribute(ApiKeyPolicyV3.ATTR_API_KEY, API_KEY_HEADER_VALUE);
         verify(policyChain, times(0)).doNext(request, response);
         verify(policyChain).failWith(any(PolicyResult.class));
     }

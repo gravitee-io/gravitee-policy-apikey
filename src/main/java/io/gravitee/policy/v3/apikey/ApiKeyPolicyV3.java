@@ -47,7 +47,7 @@ public class ApiKeyPolicyV3 {
      */
     private final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
-    static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
+    private String apiKeyHeader, apiKeyQueryParameter;
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
@@ -67,17 +67,17 @@ public class ApiKeyPolicyV3 {
                 PolicyResult.failure(
                     API_KEY_MISSING_KEY,
                     HttpStatusCode.UNAUTHORIZED_401,
-                    "No API Key has been specified in headers (" +
-                    API_KEY_HEADER +
-                    ") or query parameters (" +
-                    API_KEY_QUERY_PARAMETER +
-                    ")."
+                    "No API Key has been specified in headers (" + apiKeyHeader + ") or query parameters (" + apiKeyQueryParameter + ")."
                 )
             );
         } else {
             final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
             Optional<ApiKey> apiKeyOpt = executionContext.getComponent(ApiKeyService.class).getByApiAndKey(apiId, requestApiKey);
+
+            // Always set the apikey into the context
+            executionContext.setAttribute(ATTR_API_KEY, requestApiKey);
+
             if (apiKeyOpt.isPresent()) {
                 ApiKey apiKey = apiKeyOpt.get();
 
@@ -86,7 +86,6 @@ public class ApiKeyPolicyV3 {
                 executionContext.setAttribute(ExecutionContext.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
                 // Be sure to force the plan to the one linked to the apikey
                 executionContext.setAttribute(ExecutionContext.ATTR_PLAN, apiKey.getPlan());
-                executionContext.setAttribute(ATTR_API_KEY, apiKey.getKey());
 
                 if (!apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
                     policyChain.doNext(request, response);
@@ -104,24 +103,24 @@ public class ApiKeyPolicyV3 {
     }
 
     private String lookForApiKey(ExecutionContext executionContext, Request request) {
-        if (API_KEY_HEADER == null) {
+        if (apiKeyHeader == null) {
             Environment environment = executionContext.getComponent(Environment.class);
-            API_KEY_HEADER = environment.getProperty(API_KEY_HEADER_PROPERTY, DEFAULT_API_KEY_HEADER_PARAMETER);
-            API_KEY_QUERY_PARAMETER = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
+            apiKeyHeader = environment.getProperty(API_KEY_HEADER_PROPERTY, DEFAULT_API_KEY_HEADER_PARAMETER);
+            apiKeyQueryParameter = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
         }
 
         // 1_ First, search in HTTP headers
-        String apiKey = request.headers().getFirst(API_KEY_HEADER);
+        String apiKey = request.headers().getFirst(apiKeyHeader);
         if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
-            request.headers().remove(API_KEY_HEADER);
+            request.headers().remove(apiKeyHeader);
         }
 
         if (apiKey == null || apiKey.isEmpty()) {
             // 2_ If not found, search in query parameters
-            apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
+            apiKey = request.parameters().getFirst(apiKeyQueryParameter);
 
             if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
-                request.parameters().remove(API_KEY_QUERY_PARAMETER);
+                request.parameters().remove(apiKeyQueryParameter);
             }
         }
 
