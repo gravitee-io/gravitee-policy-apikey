@@ -41,7 +41,7 @@
         <gravitee-gateway-api.version>2.1.0</gravitee-gateway-api.version>
         <gravitee-reporter-api.version>1.25.0</gravitee-reporter-api.version>
         <gravitee-policy-api.version>1.11.0</gravitee-policy-api.version>
-        <gravitee-node.version>2.0.1</gravitee-node.version>
+        <gravitee-node.version>2.0.10</gravitee-node.version>
         <gravitee-common.version>2.0.0</gravitee-common.version>
         <gravitee-plugin.version>1.24.1</gravitee-plugin.version>
         <junit-jupiter.version>5.8.2</junit-jupiter.version>
