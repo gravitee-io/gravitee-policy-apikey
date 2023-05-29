@@ -1,3 +1,10 @@
+## [3.2.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.0...3.2.1) (2023-05-29)
+
+
+### Bug Fixes
+
+* provide execution phase for message apis in manifest ([c402411](https://github.com/gravitee-io/gravitee-policy-apikey/commit/c4024117798eedd42dd336735bfd858cce27c469))
+
 # [3.2.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.1.1...3.2.0) (2023-05-29)
 
 
