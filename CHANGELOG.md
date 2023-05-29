@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.1.1...3.2.0) (2023-05-29)
+
+
+### Features
+
+* provide execution phase in manifest ([1493fbd](https://github.com/gravitee-io/gravitee-policy-apikey/commit/1493fbd5edcbd045322e8c8018bd19de0d900d76))
+
 ## [3.1.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.1.0...3.1.1) (2023-04-18)
 
 
