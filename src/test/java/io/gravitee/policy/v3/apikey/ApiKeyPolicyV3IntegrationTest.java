@@ -15,32 +15,17 @@
  */
 package io.gravitee.policy.v3.apikey;
 
-import static org.mockito.Mockito.when;
+import static io.gravitee.definition.model.ExecutionMode.V3;
 
+import io.gravitee.apim.gateway.tests.sdk.annotations.GatewayTest;
 import io.gravitee.apim.gateway.tests.sdk.configuration.GatewayConfigurationBuilder;
 import io.gravitee.definition.model.Api;
 import io.gravitee.definition.model.ExecutionMode;
-import io.gravitee.gateway.api.service.ApiKey;
-import io.gravitee.gateway.api.service.Subscription;
-import io.gravitee.gateway.api.service.SubscriptionService;
-import io.gravitee.policy.apikey.ApiKeyPolicyIntegrationTest;
-import java.util.Optional;
+import io.gravitee.policy.apikey.ApiKeyPolicyV4EmulationEngineIntegrationTest;
 
 /**
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyIntegrationTest {
-
-    @Override
-    protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
-        super.configureGateway(gatewayConfigurationBuilder);
-        gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "false");
-    }
-
-    @Override
-    public void configureApi(Api api) {
-        super.configureApi(api);
-        api.setExecutionMode(ExecutionMode.V3);
-    }
-}
+@GatewayTest(v2ExecutionMode = V3)
+public class ApiKeyPolicyV3IntegrationTest extends ApiKeyPolicyV4EmulationEngineIntegrationTest {}

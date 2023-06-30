@@ -36,19 +36,13 @@ import io.gravitee.gateway.api.service.Subscription;
 import io.gravitee.gateway.api.service.SubscriptionService;
 import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import io.reactivex.rxjava3.observers.TestObserver;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.RequestOptions;
-import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.HttpClientRequest;
-import io.vertx.rxjava3.ext.web.client.HttpResponse;
-import io.vertx.rxjava3.ext.web.client.WebClient;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
@@ -59,13 +53,7 @@ import org.mockito.stubbing.OngoingStubbing;
  */
 @GatewayTest
 @DeployApi("/apis/api-key.json")
-public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
-
-    @Override
-    protected void configureGateway(GatewayConfigurationBuilder gatewayConfigurationBuilder) {
-        super.configureGateway(gatewayConfigurationBuilder);
-        gatewayConfigurationBuilder.set("api.jupiterMode.enabled", "true");
-    }
+public class ApiKeyPolicyV4EmulationEngineIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy, ApiKeyPolicyConfiguration> {
 
     /**
      * Override api plans to have a published API_KEY one.
@@ -80,7 +68,6 @@ public class ApiKeyPolicyIntegrationTest extends AbstractPolicyTest<ApiKeyPolicy
         apiKeyPlan.setStatus("PUBLISHED");
         apiKeyPlan.setSecurityDefinition("{\"propagateApiKey\":true}");
         api.setPlans(Collections.singletonList(apiKeyPlan));
-        api.setExecutionMode(ExecutionMode.JUPITER);
     }
 
     @Test
