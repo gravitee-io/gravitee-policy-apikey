@@ -1,3 +1,15 @@
+# [4.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.1...4.0.0-alpha.1) (2023-07-04)
+
+
+### Bug Fixes
+
+* bump dependencies versions ([486e5a1](https://github.com/gravitee-io/gravitee-policy-apikey/commit/486e5a11d3bd168f48733b4139cb29746ef99805))
+
+
+### BREAKING CHANGES
+
+* use apim version 4
+
 ## [3.2.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.0...3.2.1) (2023-05-29)
 
 
