@@ -40,7 +40,7 @@ public class ApiKeyPolicyV3 {
 
     protected static final String API_KEY_MISSING_KEY = "API_KEY_MISSING";
     protected static final String API_KEY_INVALID_KEY = "API_KEY_INVALID";
-    protected static final String API_KEY_INVALID_MESSAGE = "API Key is not valid or is expired / revoked.";
+    protected static final String API_KEY_UNAUTHORIZED_MESSAGE = "Unauthorized";
 
     /**
      * Policy configuration
@@ -63,17 +63,7 @@ public class ApiKeyPolicyV3 {
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
             // The api key is required
-            policyChain.failWith(
-                PolicyResult.failure(
-                    API_KEY_MISSING_KEY,
-                    HttpStatusCode.UNAUTHORIZED_401,
-                    "No API Key has been specified in headers (" +
-                    API_KEY_HEADER +
-                    ") or query parameters (" +
-                    API_KEY_QUERY_PARAMETER +
-                    ")."
-                )
-            );
+            policyChain.failWith(PolicyResult.failure(API_KEY_MISSING_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE));
         } else {
             final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
 
@@ -93,12 +83,14 @@ public class ApiKeyPolicyV3 {
                 } else {
                     // The api key is not valid
                     policyChain.failWith(
-                        PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_INVALID_MESSAGE)
+                        PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE)
                     );
                 }
             } else {
                 // The api key does not exist
-                policyChain.failWith(PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_INVALID_MESSAGE));
+                policyChain.failWith(
+                    PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE)
+                );
             }
         }
     }

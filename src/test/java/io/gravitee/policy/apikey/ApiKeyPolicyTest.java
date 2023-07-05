@@ -295,10 +295,7 @@ public class ApiKeyPolicyTest {
             .interruptWith(
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals(
-                        "No API Key has been specified in headers (X-Gravitee-Api-Key) or query parameters (api-key).",
-                        failure.message()
-                    );
+                    assertEquals("Unauthorized", failure.message());
                     assertEquals("API_KEY_MISSING", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
@@ -327,7 +324,7 @@ public class ApiKeyPolicyTest {
             .interruptWith(
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals("Unauthorized", failure.message());
                     assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
@@ -356,7 +353,7 @@ public class ApiKeyPolicyTest {
             .interruptWith(
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals("Unauthorized", failure.message());
                     assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
@@ -384,7 +381,7 @@ public class ApiKeyPolicyTest {
             .interruptWith(
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals("Unauthorized", failure.message());
                     assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
@@ -409,7 +406,7 @@ public class ApiKeyPolicyTest {
             .interruptWith(
                 argThat(failure -> {
                     assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("API Key is not valid or is expired / revoked.", failure.message());
+                    assertEquals("Unauthorized", failure.message());
                     assertEquals("API_KEY_INVALID", failure.key());
                     assertNull(failure.parameters());
                     assertNull(failure.contentType());
