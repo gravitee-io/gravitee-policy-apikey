@@ -1,3 +1,10 @@
+# [4.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.1...4.0.0-alpha.2) (2023-07-05)
+
+
+### Bug Fixes
+
+* simplify unauthorized message ([5dfb9d7](https://github.com/gravitee-io/gravitee-policy-apikey/commit/5dfb9d7e994cfb8c6195665b2a2fe31f72424e1e))
+
 # [4.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.1...4.0.0-alpha.1) (2023-07-04)
 
 
