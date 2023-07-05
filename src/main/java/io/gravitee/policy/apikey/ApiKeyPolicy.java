@@ -105,15 +105,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
                     if (requestApiKey.isEmpty()) {
                         // The api key is required
-                        return interrupt401(
-                            ctx,
-                            API_KEY_MISSING_KEY,
-                            "No API Key has been specified in headers (" +
-                            API_KEY_HEADER +
-                            ") or query parameters (" +
-                            API_KEY_QUERY_PARAMETER +
-                            ")."
-                        );
+                        return interrupt401(ctx, API_KEY_MISSING_KEY);
                     }
 
                     final Optional<ApiKey> apiKeyOpt = ctx
@@ -137,7 +129,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
                     log.warn("An exception occurred when trying to verify apikey.", t);
                 }
 
-                return interrupt401(ctx, API_KEY_INVALID_KEY, "API Key is not valid or is expired / revoked.");
+                return interrupt401(ctx, API_KEY_INVALID_KEY);
             })
             .doOnTerminate(() -> cleanupApiKey(ctx));
     }
@@ -146,8 +138,8 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         return !apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(ctx.request().timestamp())));
     }
 
-    private Completable interrupt401(HttpExecutionContext ctx, String key, String message) {
-        return ctx.interruptWith(new ExecutionFailure(HttpStatusCode.UNAUTHORIZED_401).key(key).message(message));
+    private Completable interrupt401(HttpExecutionContext ctx, String key) {
+        return ctx.interruptWith(new ExecutionFailure(HttpStatusCode.UNAUTHORIZED_401).key(key).message(API_KEY_UNAUTHORIZED_MESSAGE));
     }
 
     private Optional<String> extractApiKey(HttpExecutionContext ctx) {
