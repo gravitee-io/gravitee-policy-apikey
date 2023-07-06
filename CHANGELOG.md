@@ -1,3 +1,10 @@
+# [4.0.0-alpha.3](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.2...4.0.0-alpha.3) (2023-07-06)
+
+
+### Bug Fixes
+
+* properly handle api key extraction ([1baff1e](https://github.com/gravitee-io/gravitee-policy-apikey/commit/1baff1ea2bb33cf8173d18f47551a6f8f6e6f101))
+
 # [4.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.1...4.0.0-alpha.2) (2023-07-05)
 
 
