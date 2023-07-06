@@ -95,6 +95,30 @@ public class ApiKeyPolicyV4EmulationEngineIntegrationTest extends AbstractPolicy
     }
 
     @Test
+    @DisplayName("Should receive 401 - Unauthorized when calling with an empty API-Key")
+    void shouldGet401IfEmptyApiKey(HttpClient client) throws InterruptedException {
+        wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
+
+        client
+            .rxRequest(new RequestOptions().setMethod(GET).setURI("/test").putHeader("X-Gravitee-Api-Key", ""))
+            .flatMap(HttpClientRequest::rxSend)
+            .flatMapPublisher(response -> {
+                assertThat(response.statusCode()).isEqualTo(401);
+                return response.toFlowable();
+            })
+            .test()
+            .await()
+            .assertComplete()
+            .assertValue(body -> {
+                assertThat(body.toString()).isEqualTo("Unauthorized");
+                return true;
+            })
+            .assertNoErrors();
+
+        wiremock.verify(0, getRequestedFor(urlPathEqualTo("/team")));
+    }
+
+    @Test
     @DisplayName("Should receive 401 - Unauthorized when calling with an API key, without subscription")
     void shouldGet401IfNoSubscription(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));

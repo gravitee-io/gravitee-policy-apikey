@@ -63,10 +63,14 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
     @Override
     public Maybe<SecurityToken> extractSecurityToken(HttpExecutionContext ctx) {
-        final Optional<String> apiKey = extractApiKey(ctx);
-        if (apiKey.isPresent()) {
-            ctx.setInternalAttribute(ATTR_INTERNAL_API_KEY, apiKey.get());
-            return Maybe.just(SecurityToken.forApiKey(apiKey.get()));
+        final Optional<String> apiKeyOpt = extractApiKey(ctx);
+        if (apiKeyOpt.isPresent()) {
+            String apiKey = apiKeyOpt.get();
+            if (apiKey.isBlank()) {
+                return Maybe.just(SecurityToken.invalid(SecurityToken.TokenType.API_KEY));
+            }
+            ctx.setInternalAttribute(ATTR_INTERNAL_API_KEY, apiKey);
+            return Maybe.just(SecurityToken.forApiKey(apiKey));
         }
         return Maybe.empty();
     }
@@ -152,13 +156,22 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         final HttpRequest request = ctx.request();
 
         // 2_ Second, search in HTTP headers
-        apiKey = request.headers().get(API_KEY_HEADER);
-        if (apiKey != null) {
-            return Optional.of(apiKey);
+        if (request.headers().contains(API_KEY_HEADER)) {
+            apiKey = request.headers().get(API_KEY_HEADER);
+            if (apiKey == null) {
+                // Header is present but empty so init apiKey with empty string
+                apiKey = "";
+            }
         }
 
         // 3_ If not found, search in query parameters
-        apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
+        if (apiKey == null && request.parameters().containsKey(API_KEY_QUERY_PARAMETER)) {
+            apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
+            if (apiKey == null) {
+                // Header is present but empty so init apiKey with empty string
+                apiKey = "";
+            }
+        }
 
         return Optional.ofNullable(apiKey);
     }
