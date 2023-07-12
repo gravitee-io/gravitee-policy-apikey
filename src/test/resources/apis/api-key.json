@@ -28,7 +28,7 @@
       },
       "pre": [
         {
-          "name": "Api Key",
+          "name": "API Key",
           "description": "",
           "enabled": true,
           "policy": "api-key",

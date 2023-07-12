@@ -62,7 +62,7 @@ public class ApiKeyPolicyV3 {
         String requestApiKey = lookForApiKey(executionContext, request);
 
         if (requestApiKey == null || requestApiKey.isEmpty()) {
-            // The api key is required
+            // The API Key is required
             policyChain.failWith(PolicyResult.failure(API_KEY_MISSING_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE));
         } else {
             final String apiId = (String) executionContext.getAttribute(ExecutionContext.ATTR_API);
@@ -81,13 +81,13 @@ public class ApiKeyPolicyV3 {
                 if (!apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(request.timestamp())))) {
                     policyChain.doNext(request, response);
                 } else {
-                    // The api key is not valid
+                    // The API Key is not valid
                     policyChain.failWith(
                         PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE)
                     );
                 }
             } else {
-                // The api key does not exist
+                // The API Key does not exist
                 policyChain.failWith(
                     PolicyResult.failure(API_KEY_INVALID_KEY, HttpStatusCode.UNAUTHORIZED_401, API_KEY_UNAUTHORIZED_MESSAGE)
                 );
