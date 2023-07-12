@@ -119,7 +119,7 @@ public class ApiKeyPolicyV4EmulationEngineIntegrationTest extends AbstractPolicy
     }
 
     @Test
-    @DisplayName("Should receive 401 - Unauthorized when calling with an API key, without subscription")
+    @DisplayName("Should receive 401 - Unauthorized when calling with an API Key, without subscription")
     void shouldGet401IfNoSubscription(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 
@@ -148,7 +148,7 @@ public class ApiKeyPolicyV4EmulationEngineIntegrationTest extends AbstractPolicy
     }
 
     @Test
-    @DisplayName("Should receive 401 - Unauthorized when calling with an API key, with expired subscription")
+    @DisplayName("Should receive 401 - Unauthorized when calling with an API Key, with expired subscription")
     void shouldGet401IfExpiredSubscription(HttpClient client) throws InterruptedException {
         wiremock.stubFor(get("/team").willReturn(ok("response from backend")));
 

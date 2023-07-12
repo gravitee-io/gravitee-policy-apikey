@@ -77,7 +77,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
 
     /**
      * {@inheritDoc}
-     * Validate the subscription, as a valid shared API key can be linked to a closed or expired subscription.
+     * Validate the subscription, as a valid shared API Key can be linked to a closed or expired subscription.
      *
      * @return <code>true</code>, indicating that the subscription must be validated.
      */
@@ -108,7 +108,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
                     Optional<String> requestApiKey = extractApiKey(ctx);
 
                     if (requestApiKey.isEmpty()) {
-                        // The api key is required
+                        // The API Key is required
                         return interrupt401(ctx, API_KEY_MISSING_KEY);
                     }
 

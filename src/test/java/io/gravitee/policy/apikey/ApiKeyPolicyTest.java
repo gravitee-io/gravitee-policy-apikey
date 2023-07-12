@@ -87,7 +87,7 @@ public class ApiKeyPolicyTest {
         lenient().when(ctx.request()).thenReturn(request);
         lenient().when(request.timestamp()).thenReturn(System.currentTimeMillis());
 
-        // Initialize default header and query param names to get api key from.
+        // Initialize default header and query param names to get API Key from.
         initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, DEFAULT_API_KEY_QUERY_PARAMETER);
     }
 
