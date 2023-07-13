@@ -1,3 +1,10 @@
+# [4.0.0-alpha.4](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.3...4.0.0-alpha.4) (2023-07-13)
+
+
+### Bug Fixes
+
+* rationalize API Key spelling and casing ([896140b](https://github.com/gravitee-io/gravitee-policy-apikey/commit/896140b6ba0af1624ac6c18f0e5e3ad4499a87ea))
+
 # [4.0.0-alpha.3](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.2...4.0.0-alpha.3) (2023-07-06)
 
 
