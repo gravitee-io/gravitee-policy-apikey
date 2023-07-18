@@ -1,3 +1,24 @@
+# [4.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.1...4.0.0) (2023-07-18)
+
+
+### Bug Fixes
+
+* bump dependencies versions ([486e5a1](https://github.com/gravitee-io/gravitee-policy-apikey/commit/486e5a11d3bd168f48733b4139cb29746ef99805))
+* properly handle api key extraction ([1baff1e](https://github.com/gravitee-io/gravitee-policy-apikey/commit/1baff1ea2bb33cf8173d18f47551a6f8f6e6f101))
+* rationalize API Key spelling and casing ([896140b](https://github.com/gravitee-io/gravitee-policy-apikey/commit/896140b6ba0af1624ac6c18f0e5e3ad4499a87ea))
+* simplify unauthorized message ([5dfb9d7](https://github.com/gravitee-io/gravitee-policy-apikey/commit/5dfb9d7e994cfb8c6195665b2a2fe31f72424e1e))
+
+
+### chore
+
+* **deps:** update gravitee-parent ([3e2225e](https://github.com/gravitee-io/gravitee-policy-apikey/commit/3e2225e6501b5a2a65f3cc593d792d713758b8f2))
+
+
+### BREAKING CHANGES
+
+* **deps:** require Java17
+* use apim version 4
+
 # [4.0.0-alpha.4](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0-alpha.3...4.0.0-alpha.4) (2023-07-13)
 
 
