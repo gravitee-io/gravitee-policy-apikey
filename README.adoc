@@ -27,6 +27,14 @@ keys to access your APIs.
 This policy ensures that API Keys are valid, have not been revoked or expired and are approved to consume the specific
 resources associated with your API.
 
+== Compatibility with APIM
+
+|===
+| Plugin version | APIM version
+| 2.x            | 3.x
+| 4.x            | 4.0 to latest
+|===
+
 == Configuration
 
 === Policy
