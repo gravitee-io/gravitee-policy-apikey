@@ -1,3 +1,10 @@
+## [4.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0...4.0.1) (2023-07-20)
+
+
+### Bug Fixes
+
+* update policy description ([9ee986b](https://github.com/gravitee-io/gravitee-policy-apikey/commit/9ee986b2746df61171007cd4a60a3e45f4f927b4))
+
 # [4.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/3.2.1...4.0.0) (2023-07-18)
 
 
