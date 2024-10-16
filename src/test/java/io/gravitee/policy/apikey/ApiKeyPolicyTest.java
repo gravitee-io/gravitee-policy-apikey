@@ -18,6 +18,7 @@ package io.gravitee.policy.apikey;
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
 import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -31,6 +32,7 @@ import io.gravitee.gateway.reactive.api.context.ContextAttributes;
 import io.gravitee.gateway.reactive.api.context.HttpExecutionContext;
 import io.gravitee.gateway.reactive.api.context.Request;
 import io.gravitee.gateway.reactive.api.context.Response;
+import io.gravitee.gateway.reactive.api.context.kafka.KafkaConnectionContext;
 import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.reactivex.rxjava3.core.Completable;
@@ -38,7 +40,12 @@ import io.reactivex.rxjava3.observers.TestObserver;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.NameCallback;
+import org.apache.kafka.common.security.plain.PlainAuthenticateCallback;
+import org.apache.kafka.common.security.scram.ScramCredentialCallback;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -67,421 +74,604 @@ public class ApiKeyPolicyTest {
     @Mock
     private ApiKeyService apiKeyService;
 
-    @Mock
-    private Request request;
+    @Nested
+    class HttpPolicy {
 
-    @Mock
-    private Response response;
+        @Mock
+        private Request request;
 
-    @Mock
-    private HttpExecutionContext ctx;
+        @Mock
+        private Response response;
 
-    @Mock
-    private Environment environment;
+        @Mock
+        private HttpExecutionContext ctx;
 
-    @BeforeEach
-    void init() {
-        ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
-        ApiKeyPolicy.API_KEY_HEADER = null;
+        @Mock
+        private Environment environment;
 
-        lenient().when(ctx.request()).thenReturn(request);
-        lenient().when(request.timestamp()).thenReturn(System.currentTimeMillis());
+        @BeforeEach
+        void init() {
+            ApiKeyPolicy.API_KEY_QUERY_PARAMETER = null;
+            ApiKeyPolicy.API_KEY_HEADER = null;
 
-        // Initialize default header and query param names to get API Key from.
-        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, DEFAULT_API_KEY_QUERY_PARAMETER);
-    }
+            lenient().when(ctx.request()).thenReturn(request);
+            lenient().when(ctx.timestamp()).thenReturn(System.currentTimeMillis());
 
-    @Test
-    void shouldCompleteWhenApiKeyIsValid() {
-        final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
-        final ApiKey apiKey = buildApiKey();
+            // Initialize default header and query param names to get API Key from.
+            initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, DEFAULT_API_KEY_QUERY_PARAMETER);
+        }
 
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(request.headers()).thenReturn(headers);
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteWhenApiKeyIsValid() {
+            final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(request.headers()).thenReturn(headers);
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
-        verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
-        verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
-        verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            obs.assertResult();
 
-        assertEquals(API_KEY, headers.get(X_GRAVITEE_API_KEY));
-    }
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
 
-    @Test
-    void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() {
-        final ApiKey apiKey = buildApiKey();
+            assertEquals(API_KEY, headers.get(X_GRAVITEE_API_KEY));
+        }
 
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() {
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
-    }
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenConfigurationIsNull() {
-        final ApiKey apiKey = buildApiKey();
+            obs.assertResult();
+        }
 
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        when(request.headers()).thenReturn(mock(HttpHeaders.class));
-        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenConfigurationIsNull() {
+            final ApiKey apiKey = buildApiKey();
 
-        mockApiKeyService(apiKey);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            when(request.headers()).thenReturn(mock(HttpHeaders.class));
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(null);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(null);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() {
-        final ApiKey apiKey = buildApiKey();
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
+        }
 
-        when(configuration.isPropagateApiKey()).thenReturn(false);
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        when(request.headers()).thenReturn(mock(HttpHeaders.class));
-        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() {
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            when(configuration.isPropagateApiKey()).thenReturn(false);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            when(request.headers()).thenReturn(mock(HttpHeaders.class));
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromHeaderWhenPropagateApiKeyIsDisabled() {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
-        final ApiKey apiKey = buildApiKey();
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_API_KEY);
+        }
 
-        when(configuration.isPropagateApiKey()).thenReturn(false);
-        when(request.headers()).thenReturn(headers);
-        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromHeaderWhenPropagateApiKeyIsDisabled() {
+            final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            when(configuration.isPropagateApiKey()).thenReturn(false);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        assertFalse(headers.contains(X_GRAVITEE_API_KEY));
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteWhenCustomHeader() {
-        final String customHeader = "My-Custom-Api-Key";
+            assertFalse(headers.contains(X_GRAVITEE_API_KEY));
+        }
 
-        final HttpHeaders headers = buildHttpHeaders(customHeader);
-        final ApiKey apiKey = buildApiKey();
+        @Test
+        void shouldCompleteWhenCustomHeader() {
+            final String customHeader = "My-Custom-Api-Key";
 
-        initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(request.headers()).thenReturn(headers);
-        mockApiKeyService(apiKey);
+            final HttpHeaders headers = buildHttpHeaders(customHeader);
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(request.headers()).thenReturn(headers);
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        assertTrue(headers.contains(customHeader));
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() {
-        final String customHeader = "My-Custom-Api-Key";
+            assertTrue(headers.contains(customHeader));
+        }
 
-        final HttpHeaders headers = buildHttpHeaders(customHeader);
-        final ApiKey apiKey = buildApiKey();
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() {
+            final String customHeader = "My-Custom-Api-Key";
 
-        initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
-        when(configuration.isPropagateApiKey()).thenReturn(false);
-        when(request.headers()).thenReturn(headers);
-        when(request.parameters()).thenReturn(mock(MultiValueMap.class));
-        mockApiKeyService(apiKey);
+            final HttpHeaders headers = buildHttpHeaders(customHeader);
+            final ApiKey apiKey = buildApiKey();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(configuration.isPropagateApiKey()).thenReturn(false);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        assertFalse(headers.contains(customHeader));
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromQueryParamWhenPropagateApiKeyIsDisabled() {
-        final ApiKey apiKey = buildApiKey();
-        final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
+            assertFalse(headers.contains(customHeader));
+        }
 
-        when(request.parameters()).thenReturn(parameters);
-        when(configuration.isPropagateApiKey()).thenReturn(false);
-        when(request.headers()).thenReturn(HttpHeaders.create());
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromQueryParamWhenPropagateApiKeyIsDisabled() {
+            final ApiKey apiKey = buildApiKey();
+            final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            when(request.parameters()).thenReturn(parameters);
+            when(configuration.isPropagateApiKey()).thenReturn(false);
+            when(request.headers()).thenReturn(HttpHeaders.create());
+            mockApiKeyService(apiKey);
 
-        obs.assertResult();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-        assertFalse(request.parameters().containsKey(DEFAULT_API_KEY_QUERY_PARAMETER));
-    }
+            obs.assertResult();
 
-    @Test
-    void shouldCompleteWhenCustomQueryParam() {
-        final ApiKey apiKey = buildApiKey();
-        final String customQueryParam = "My-Custom-Api-Key";
-        final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
+            assertFalse(request.parameters().containsKey(DEFAULT_API_KEY_QUERY_PARAMETER));
+        }
 
-        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
-        when(request.parameters()).thenReturn(parameters);
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(request.headers()).thenReturn(HttpHeaders.create());
-        mockApiKeyService(apiKey);
+        @Test
+        void shouldCompleteWhenCustomQueryParam() {
+            final ApiKey apiKey = buildApiKey();
+            final String customQueryParam = "My-Custom-Api-Key";
+            final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
+
+            initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
+            when(request.parameters()).thenReturn(parameters);
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(request.headers()).thenReturn(HttpHeaders.create());
+            mockApiKeyService(apiKey);
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
-
-        obs.assertResult();
-
-        assertTrue(request.parameters().containsKey(customQueryParam));
-    }
-
-    @Test
-    void shouldCompleteAndRemoveApiKeyFromCustomQueryParamWhenPropagateApiKeyIsDisabled() {
-        final ApiKey apiKey = buildApiKey();
-        final String customQueryParam = "My-Custom-Api-Key";
-        final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
-
-        initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
-        when(request.parameters()).thenReturn(parameters);
-        when(configuration.isPropagateApiKey()).thenReturn(false);
-        when(request.headers()).thenReturn(mock(HttpHeaders.class));
-        mockApiKeyService(apiKey);
-
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
-
-        obs.assertResult();
-
-        assertFalse(request.parameters().containsKey(customQueryParam));
-    }
-
-    @Test
-    void shouldInterruptWith401WhenNoApiKey() {
-        when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
-        when(request.headers()).thenReturn(HttpHeaders.create());
-        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
-
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
-
-        obs.assertFailure(Throwable.class);
-
-        verify(ctx)
-            .interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("Unauthorized", failure.message());
-                    assertEquals("API_KEY_MISSING", failure.key());
-                    assertNull(failure.parameters());
-                    assertNull(failure.contentType());
-
-                    return true;
-                })
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertResult();
+
+            assertTrue(request.parameters().containsKey(customQueryParam));
+        }
+
+        @Test
+        void shouldCompleteAndRemoveApiKeyFromCustomQueryParamWhenPropagateApiKeyIsDisabled() {
+            final ApiKey apiKey = buildApiKey();
+            final String customQueryParam = "My-Custom-Api-Key";
+            final MultiValueMap<String, String> parameters = buildQueryParameters(customQueryParam);
+
+            initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
+            when(request.parameters()).thenReturn(parameters);
+            when(configuration.isPropagateApiKey()).thenReturn(false);
+            when(request.headers()).thenReturn(mock(HttpHeaders.class));
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertResult();
+
+            assertFalse(request.parameters().containsKey(customQueryParam));
+        }
+
+        @Test
+        void shouldInterruptWith401WhenNoApiKey() {
+            when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+            when(request.headers()).thenReturn(HttpHeaders.create());
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("Unauthorized", failure.message());
+                        assertEquals("API_KEY_MISSING", failure.key());
+                        assertNull(failure.parameters());
+                        assertNull(failure.contentType());
+
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void shouldInterruptWith401WhenApiKeyExpired() {
+            final ApiKey apiKey = buildApiKey();
+            apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
+
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            mockApiKeyService(apiKey);
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("Unauthorized", failure.message());
+                        assertEquals("API_KEY_INVALID", failure.key());
+                        assertNull(failure.parameters());
+                        assertNull(failure.contentType());
+
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void shouldInterruptWith401WhenApiKeyRevoked() {
+            final ApiKey apiKey = buildApiKey();
+            apiKey.setRevoked(true);
+
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            mockApiKeyService(apiKey);
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("Unauthorized", failure.message());
+                        assertEquals("API_KEY_INVALID", failure.key());
+                        assertNull(failure.parameters());
+                        assertNull(failure.contentType());
+
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void shouldInterruptWith401WhenApiKeyNotFound() {
+            final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
+
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(request.headers()).thenReturn(headers);
+            mockApiKeyService(null);
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("Unauthorized", failure.message());
+                        assertEquals("API_KEY_INVALID", failure.key());
+                        assertNull(failure.parameters());
+                        assertNull(failure.contentType());
+
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void shouldInterruptWith401WhenExceptionOccurred() {
+            when(configuration.isPropagateApiKey()).thenReturn(true);
+            when(request.headers()).thenThrow(MOCK_EXCEPTION);
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("Unauthorized", failure.message());
+                        assertEquals("API_KEY_INVALID", failure.key());
+                        assertNull(failure.parameters());
+                        assertNull(failure.contentType());
+
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyInternalAttributeIsFound() {
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
-    }
+        }
 
-    @Test
-    void shouldInterruptWith401WhenApiKeyExpired() {
-        final ApiKey apiKey = buildApiKey();
-        apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyHeaderIsFound() {
+            final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+            when(request.headers()).thenReturn(headers);
 
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockApiKeyService(apiKey);
-        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
-
-        obs.assertFailure(Throwable.class);
-
-        verify(ctx)
-            .interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("Unauthorized", failure.message());
-                    assertEquals("API_KEY_INVALID", failure.key());
-                    assertNull(failure.parameters());
-                    assertNull(failure.contentType());
-
-                    return true;
-                })
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
-    }
+        }
 
-    @Test
-    void shouldInterruptWith401WhenApiKeyRevoked() {
-        final ApiKey apiKey = buildApiKey();
-        apiKey.setRevoked(true);
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyQueryParamIsFound() {
+            final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(request.headers()).thenReturn(HttpHeaders.create());
+            when(request.parameters()).thenReturn(parameters);
 
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
-        mockApiKeyService(apiKey);
-        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
-
-        obs.assertFailure(Throwable.class);
-
-        verify(ctx)
-            .interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("Unauthorized", failure.message());
-                    assertEquals("API_KEY_INVALID", failure.key());
-                    assertNull(failure.parameters());
-                    assertNull(failure.contentType());
-
-                    return true;
-                })
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
+        }
+
+        @Test
+        void extractSecurityToken_shouldReturnEmpty_whenNoApiKeyIsFound() {
+            when(request.headers()).thenReturn(HttpHeaders.create());
+            when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertComplete().assertValueCount(0);
+        }
+
+        @Test
+        void shouldNotValidateSubscription() {
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            assertTrue(cut.requireSubscription());
+        }
+
+        @Test
+        void shouldReturnIdApiKey() {
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            assertEquals("api-key", cut.id());
+        }
+
+        @Test
+        void shouldReturnOrder500() {
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            assertEquals(500, cut.order());
+        }
+
+        private HttpHeaders buildHttpHeaders(String headerKey) {
+            return HttpHeaders.create().add(headerKey, ApiKeyPolicyTest.API_KEY);
+        }
+
+        private MultiValueMap<String, String> buildQueryParameters(String paramKey) {
+            final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+            parameters.put(paramKey, List.of(ApiKeyPolicyTest.API_KEY));
+            return parameters;
+        }
+
+        private void mockApiKeyService(ApiKey apiKey) {
+            when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
+            when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
+            when(apiKeyService.getByApiAndKey(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
+        }
+
+        private void initializeParamNames(String apiKeyHeaderName, String apiKeyQueryParameterName) {
+            ApiKeyPolicy.API_KEY_HEADER = apiKeyHeaderName;
+            ApiKeyPolicy.API_KEY_QUERY_PARAMETER = apiKeyQueryParameterName;
+        }
     }
 
-    @Test
-    void shouldInterruptWith401WhenApiKeyNotFound() {
-        final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
+    @Nested
+    class KafkaPolicy {
 
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(request.headers()).thenReturn(headers);
-        mockApiKeyService(null);
-        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+        @Mock
+        private KafkaConnectionContext ctx;
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+        @Mock
+        private Environment environment;
 
-        obs.assertFailure(Throwable.class);
+        @BeforeEach
+        void init() {
+            lenient().when(ctx.timestamp()).thenReturn(System.currentTimeMillis());
+        }
 
-        verify(ctx)
-            .interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("Unauthorized", failure.message());
-                    assertEquals("API_KEY_INVALID", failure.key());
-                    assertNull(failure.parameters());
-                    assertNull(failure.contentType());
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenCallbackHasName() {
+            NameCallback nameCallback = new NameCallback("prompt");
+            nameCallback.setName(API_KEY);
 
-                    return true;
-                })
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
-    }
+            verify(ctx).setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, API_KEY);
+        }
 
-    @Test
-    void shouldInterruptWith401WhenExceptionOccurred() {
-        when(configuration.isPropagateApiKey()).thenReturn(true);
-        when(request.headers()).thenThrow(MOCK_EXCEPTION);
-        when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+        @Test
+        void extractSecurityToken_shouldReturnEmpty_whenNoNameCallback() {
+            when(ctx.callbacks()).thenReturn(new Callback[] {});
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<Void> obs = cut.onRequest(ctx).test();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        obs.assertFailure(Throwable.class);
+            obs.assertNoValues();
+            verify(ctx, never()).setInternalAttribute(any(), any());
+        }
 
-        verify(ctx)
-            .interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("Unauthorized", failure.message());
-                    assertEquals("API_KEY_INVALID", failure.key());
-                    assertNull(failure.parameters());
-                    assertNull(failure.contentType());
+        @Test
+        void extractSecurityToken_shouldReturnInvalidSecurityToken_whenCallbackIsEmpty() {
+            NameCallback nameCallback = new NameCallback("prompt");
 
-                    return true;
-                })
-            );
-    }
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
 
-    @Test
-    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyInternalAttributeIsFound() {
-        when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+            obs.assertValue(token -> token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.isInvalid());
+            verify(ctx, never()).setInternalAttribute(any(), any());
+        }
 
-        obs.assertValue(token ->
-            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
-        );
-    }
+        @Test
+        void shouldCompleteWhenApiKeyIsValid_withPlaintext() {
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
 
-    @Test
-    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyHeaderIsFound() {
-        final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
-        when(request.headers()).thenReturn(headers);
+            when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            final ApiKey apiKey = buildApiKey();
+            mockApiKeyService(apiKey);
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
 
-        obs.assertValue(token ->
-            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
-        );
-    }
+            obs.assertComplete();
+            assertThat(plainAuthenticateCallback.authenticated()).isTrue();
 
-    @Test
-    void extractSecurityToken_shouldReturnSecurityToken_whenApiKeyQueryParamIsFound() {
-        final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
-        when(request.headers()).thenReturn(HttpHeaders.create());
-        when(request.parameters()).thenReturn(parameters);
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+        @Test
+        void shouldCompleteWhenApiKeyIsValid_withScram() {
+            ScramCredentialCallback scramCredentialCallback = new ScramCredentialCallback();
 
-        obs.assertValue(token ->
-            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
-        );
-    }
+            when(ctx.callbacks()).thenReturn(new Callback[] { scramCredentialCallback });
+            when(ctx.saslMechanism()).thenReturn("SCRAM-SHA-256");
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            final ApiKey apiKey = buildApiKey();
+            mockApiKeyService(apiKey);
 
-    @Test
-    void extractSecurityToken_shouldReturnEmpty_whenNoApiKeyIsFound() {
-        when(request.headers()).thenReturn(HttpHeaders.create());
-        when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
 
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+            obs.assertComplete();
+            assertThat(scramCredentialCallback.scramCredential()).isNotNull();
 
-        obs.assertComplete().assertValueCount(0);
-    }
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
 
-    @Test
-    void shouldNotValidateSubscription() {
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        assertTrue(cut.requireSubscription());
-    }
+        @Test
+        void shouldNotCompleteWhenApiKeyIsNotFound() {
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            mockApiKeyService(null);
 
-    @Test
-    void shouldReturnIdApiKey() {
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        assertEquals("api-key", cut.id());
-    }
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
 
-    @Test
-    void shouldReturnOrder500() {
-        final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
-        assertEquals(500, cut.order());
+            obs.assertError(throwable -> throwable.getMessage().equals("API_KEY_INVALID"));
+
+            verify(ctx, never()).setAttribute(any(), any());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
+
+        @Test
+        void shouldNotCompleteWhenApiKeyIsNotValid() {
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            final ApiKey apiKey = buildApiKey();
+            apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
+
+            obs.assertError(throwable -> throwable.getMessage().equals("API_KEY_INVALID"));
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
+
+        @Test
+        void shouldNotCompleteWhenApiKeyIsRevoked() {
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            final ApiKey apiKey = buildApiKey();
+            apiKey.setRevoked(true);
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
+
+            obs.assertError(throwable -> throwable.getMessage().equals("API_KEY_INVALID"));
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
+
+        private void mockApiKeyService(ApiKey apiKey) {
+            when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
+            when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
+            when(apiKeyService.getByApiAndMd5Key(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
+        }
     }
 
     private ApiKey buildApiKey() {
@@ -491,27 +681,7 @@ public class ApiKeyPolicyTest {
         apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setKey(API_KEY);
         return apiKey;
-    }
-
-    private HttpHeaders buildHttpHeaders(String headerKey) {
-        return HttpHeaders.create().add(headerKey, ApiKeyPolicyTest.API_KEY);
-    }
-
-    private MultiValueMap<String, String> buildQueryParameters(String paramKey) {
-        final MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-        parameters.put(paramKey, List.of(ApiKeyPolicyTest.API_KEY));
-        return parameters;
-    }
-
-    private void mockApiKeyService(ApiKey apiKey) {
-        when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
-        when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
-        when(apiKeyService.getByApiAndKey(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
-    }
-
-    private void initializeParamNames(String apiKeyHeaderName, String apiKeyQueryParameterName) {
-        ApiKeyPolicy.API_KEY_HEADER = apiKeyHeaderName;
-        ApiKeyPolicy.API_KEY_QUERY_PARAMETER = apiKeyQueryParameterName;
     }
 }
