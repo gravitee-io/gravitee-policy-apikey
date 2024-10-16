@@ -21,10 +21,14 @@ import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.reactive.api.ExecutionFailure;
 import io.gravitee.gateway.reactive.api.context.ContextAttributes;
-import io.gravitee.gateway.reactive.api.context.HttpExecutionContext;
+import io.gravitee.gateway.reactive.api.context.HttpPlainExecutionContext;
 import io.gravitee.gateway.reactive.api.context.HttpRequest;
+import io.gravitee.gateway.reactive.api.context.http.HttpPlainExecutionContext;
+import io.gravitee.gateway.reactive.api.context.http.HttpPlainRequest;
 import io.gravitee.gateway.reactive.api.policy.SecurityPolicy;
 import io.gravitee.gateway.reactive.api.policy.SecurityToken;
+import io.gravitee.gateway.reactive.api.policy.http.HttpSecurityPolicy;
+import io.gravitee.gateway.reactive.api.policy.kafka.KafkaSecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.rxjava3.core.Completable;
@@ -39,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
+public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy {
 
     static final String ATTR_API_KEY = ContextAttributes.ATTR_PREFIX + "api-key";
     static final String ATTR_INTERNAL_API_KEY = "api-key";
@@ -62,7 +66,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
     }
 
     @Override
-    public Maybe<SecurityToken> extractSecurityToken(HttpExecutionContext ctx) {
+    public Maybe<SecurityToken> extractSecurityToken(HttpPlainExecutionContext ctx) {
         final Optional<String> apiKeyOpt = extractApiKey(ctx);
         if (apiKeyOpt.isPresent()) {
             String apiKey = apiKeyOpt.get();
@@ -97,11 +101,11 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
     }
 
     @Override
-    public Completable onRequest(final HttpExecutionContext ctx) {
+    public Completable onRequest(final HttpPlainExecutionContext ctx) {
         return handleSecurity(ctx);
     }
 
-    private Completable handleSecurity(final HttpExecutionContext ctx) {
+    private Completable handleSecurity(final HttpPlainExecutionContext ctx) {
         return Completable
             .defer(() -> {
                 try {
@@ -138,22 +142,22 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
             .doOnTerminate(() -> cleanupApiKey(ctx));
     }
 
-    private boolean isApiKeyValid(HttpExecutionContext ctx, ApiKey apiKey) {
+    private boolean isApiKeyValid(HttpPlainExecutionContext ctx, ApiKey apiKey) {
         return !apiKey.isRevoked() && (apiKey.getExpireAt() == null || apiKey.getExpireAt().after(new Date(ctx.request().timestamp())));
     }
 
-    private Completable interrupt401(HttpExecutionContext ctx, String key) {
+    private Completable interrupt401(HttpPlainExecutionContext ctx, String key) {
         return ctx.interruptWith(new ExecutionFailure(HttpStatusCode.UNAUTHORIZED_401).key(key).message(API_KEY_UNAUTHORIZED_MESSAGE));
     }
 
-    private Optional<String> extractApiKey(HttpExecutionContext ctx) {
+    private Optional<String> extractApiKey(HttpPlainExecutionContext ctx) {
         // 1_ First, check if already resolved.
         String apiKey = ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY);
         if (apiKey != null) {
             return Optional.of(apiKey);
         }
 
-        final HttpRequest request = ctx.request();
+        final HttpPlainRequest request = ctx.request();
 
         // 2_ Second, search in HTTP headers
         if (request.headers().contains(API_KEY_HEADER)) {
@@ -176,7 +180,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements SecurityPolicy {
         return Optional.ofNullable(apiKey);
     }
 
-    private void cleanupApiKey(HttpExecutionContext ctx) {
+    private void cleanupApiKey(HttpPlainExecutionContext ctx) {
         if (!propagateApiKey) {
             ctx.request().headers().remove(API_KEY_HEADER);
             ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
