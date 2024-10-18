@@ -22,7 +22,7 @@
 
     <groupId>io.gravitee.policy</groupId>
     <artifactId>gravitee-policy-apikey</artifactId>
-    <version>5.0.0-apim-7143-impl-security-chain-SNAPSHOT</version>
+    <version>5.0.0-alpha.1</version>
 
     <name>Gravitee.io APIM - Policy - ApiKey</name>
     <description>Enforce API Key checks during request processing, allowing only apps with approved API keys to access your APIs</description>
