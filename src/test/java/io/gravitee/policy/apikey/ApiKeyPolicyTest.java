@@ -532,8 +532,23 @@ public class ApiKeyPolicyTest {
 
         @Test
         void extractSecurityToken_shouldReturnSecurityToken_whenCallbackHasName() {
-            NameCallback nameCallback = new NameCallback("prompt");
+            NameCallback nameCallback = new NameCallback("prompt", "default name");
             nameCallback.setName(API_KEY);
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+            );
+            verify(ctx).setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, API_KEY);
+        }
+
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenCallbackHasDefaultName() {
+            NameCallback nameCallback = new NameCallback("prompt", API_KEY);
 
             when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
 

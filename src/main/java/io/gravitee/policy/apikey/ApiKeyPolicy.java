@@ -197,11 +197,15 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
             if (callback instanceof NameCallback nameCallback) {
                 // With SASL_PLAIN or SCRAM, we expect the username to be a md5 hash of the api-key, for security and privacy.
                 String md5ApiKey = nameCallback.getName();
-                if (md5ApiKey != null && !md5ApiKey.isBlank()) {
-                    ctx.setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, md5ApiKey);
-                    return Maybe.just(SecurityToken.forMD5ApiKey(md5ApiKey));
+                if (md5ApiKey == null || md5ApiKey.isBlank()) {
+                    md5ApiKey = nameCallback.getDefaultName();
                 }
-                return Maybe.just(SecurityToken.invalid(MD5_API_KEY));
+                if (md5ApiKey == null || md5ApiKey.isBlank()) {
+                    return Maybe.just(SecurityToken.invalid(MD5_API_KEY));
+                }
+
+                ctx.setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, md5ApiKey);
+                return Maybe.just(SecurityToken.forMD5ApiKey(md5ApiKey));
             }
         }
         return Maybe.empty();
