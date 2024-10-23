@@ -1,3 +1,10 @@
+# [5.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0-alpha.1...5.0.0-alpha.2) (2024-10-23)
+
+
+### Bug Fixes
+
+* name may be null ([5698a9c](https://github.com/gravitee-io/gravitee-policy-apikey/commit/5698a9c241f61b8aeca3ad374e5efbd5e53374c2))
+
 # [5.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.1...5.0.0-alpha.1) (2024-10-18)
 
 
