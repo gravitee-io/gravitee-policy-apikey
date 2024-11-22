@@ -31,8 +31,9 @@ resources associated with your API.
 
 |===
 | Plugin version | APIM version
+| 5.x            | 4.6.x to latest
+| 4.x            | 4.0.x to 4.5.x
 | 2.x            | 3.x
-| 4.x            | 4.0 to latest
 |===
 
 == Configuration
