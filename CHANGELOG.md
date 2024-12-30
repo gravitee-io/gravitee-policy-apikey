@@ -1,3 +1,34 @@
+# [5.0.0-alpha.3](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0-alpha.2...5.0.0-alpha.3) (2024-12-30)
+
+
+### Bug Fixes
+
+* **deps:** bump apim version ([a105ecc](https://github.com/gravitee-io/gravitee-policy-apikey/commit/a105ecc39ec84c26740f4f300988b2cf2c7341b6))
+
+# [5.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0-alpha.1...5.0.0-alpha.2) (2024-10-23)
+
+
+### Bug Fixes
+
+* name may be null ([5698a9c](https://github.com/gravitee-io/gravitee-policy-apikey/commit/5698a9c241f61b8aeca3ad374e5efbd5e53374c2))
+
+# [5.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.1...5.0.0-alpha.1) (2024-10-18)
+
+
+### Code Refactoring
+
+* use new HttpSecurityPolicy interface ([6375ced](https://github.com/gravitee-io/gravitee-policy-apikey/commit/6375ced539c07e2c8a7d3e9c1891e609dabeea91))
+
+
+### Features
+
+* implement kafka policy security methods ([28d844a](https://github.com/gravitee-io/gravitee-policy-apikey/commit/28d844acf17cc884497b3f13abe0e4891c434c7d))
+
+
+### BREAKING CHANGES
+
+* requires APIM 4.6+
+
 ## [4.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.0...4.0.1) (2023-07-20)
 
 
