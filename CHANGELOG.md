@@ -1,3 +1,10 @@
+# [5.0.0-alpha.3](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0-alpha.2...5.0.0-alpha.3) (2024-12-30)
+
+
+### Bug Fixes
+
+* **deps:** bump apim version ([a105ecc](https://github.com/gravitee-io/gravitee-policy-apikey/commit/a105ecc39ec84c26740f4f300988b2cf2c7341b6))
+
 # [5.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0-alpha.1...5.0.0-alpha.2) (2024-10-23)
 
 
