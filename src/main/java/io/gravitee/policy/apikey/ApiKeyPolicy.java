@@ -228,8 +228,10 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
                                 Callback[] callbacks = ctx.callbacks();
                                 for (Callback callback : callbacks) {
                                     if (callback instanceof PlainAuthenticateCallback plainAuthenticateCallback) {
-                                        plainAuthenticateCallback.authenticated(true);
-                                        return true;
+                                        if (String.valueOf(plainAuthenticateCallback.password()).equals(apiKey.getKey())) {
+                                            plainAuthenticateCallback.authenticated(true);
+                                            return true;
+                                        }
                                     } else if (callback instanceof ScramCredentialCallback scramCredentialCallback) {
                                         ScramCredential scramCredential = createScramCredential(
                                             apiKey.getKey(),

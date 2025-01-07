@@ -51,6 +51,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
+import org.springframework.util.DigestUtils;
 
 /**
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
@@ -586,8 +587,8 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldCompleteWhenApiKeyIsValid_withPlaintext() {
-            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
+        void shouldCompleteWhenApiKeyIsValid_withPlain() {
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback(API_KEY.toCharArray());
 
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
             when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
@@ -608,7 +609,7 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldCompleteWhenApiKeyIsValid_withScram() {
+        void authenticate_shouldCompleteWhenApiKeyIsValid_withScram() {
             ScramCredentialCallback scramCredentialCallback = new ScramCredentialCallback();
 
             when(ctx.callbacks()).thenReturn(new Callback[] { scramCredentialCallback });
@@ -631,7 +632,7 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldNotCompleteWhenApiKeyIsNotFound() {
+        void authenticate_shouldNotCompleteWhenApiKeyIsNotFound() {
             when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
             mockApiKeyService(null);
 
@@ -645,7 +646,7 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldNotCompleteWhenApiKeyIsNotValid() {
+        void authenticate_shouldNotCompleteWhenApiKeyIsNotValid() {
             when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
             final ApiKey apiKey = buildApiKey();
             apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
@@ -664,10 +665,31 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldNotCompleteWhenApiKeyIsRevoked() {
+        void authenticate_shouldNotCompleteWhenApiKeyIsRevoked() {
             when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
             final ApiKey apiKey = buildApiKey();
             apiKey.setRevoked(true);
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
+
+            obs.assertError(throwable -> throwable.getMessage().equals("API_KEY_INVALID"));
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
+        }
+
+        @Test
+        void authenticate_shouldNotCompleteWhenApiKeyIsValidButPasswordDoesNotCorrespond_withPlain() {
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
