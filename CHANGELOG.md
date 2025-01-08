@@ -1,3 +1,10 @@
+## [5.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0...5.0.1) (2025-01-08)
+
+
+### Bug Fixes
+
+* **native kafka:** handle wrong password in sasl plain authent ([bb2e08b](https://github.com/gravitee-io/gravitee-policy-apikey/commit/bb2e08b5e424b7c561a209112165f5ab6e780abc))
+
 # [5.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/4.0.1...5.0.0) (2024-12-30)
 
 
