@@ -24,6 +24,7 @@ import io.gravitee.gateway.api.service.ApiKey;
 import io.gravitee.gateway.api.service.ApiKeyService;
 import io.gravitee.gateway.reactive.api.ExecutionFailure;
 import io.gravitee.gateway.reactive.api.context.ContextAttributes;
+import io.gravitee.gateway.reactive.api.context.InternalContextAttributes;
 import io.gravitee.gateway.reactive.api.context.base.BaseExecutionContext;
 import io.gravitee.gateway.reactive.api.context.http.HttpPlainExecutionContext;
 import io.gravitee.gateway.reactive.api.context.http.HttpPlainRequest;
@@ -32,6 +33,7 @@ import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.gateway.reactive.api.policy.http.HttpSecurityPolicy;
 import io.gravitee.gateway.reactive.api.policy.kafka.KafkaSecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.utils.DigestUtils;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
@@ -39,6 +41,7 @@ import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.NameCallback;
 import lombok.SneakyThrows;
@@ -60,6 +63,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     static final String ATTR_API_KEY = ContextAttributes.ATTR_PREFIX + "api-key";
     static final String ATTR_INTERNAL_API_KEY = "api-key";
     static final String ATTR_INTERNAL_MD5_API_KEY = "md5-api-key";
+    static final String ATTR_INTERNAL_PASSWORD_API_KEY = "password-api-key";
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
@@ -193,10 +197,11 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     @Override
     public Maybe<SecurityToken> extractSecurityToken(KafkaConnectionContext ctx) {
         Callback[] callbacks = ctx.callbacks();
+        String md5ApiKey = null;
         for (Callback callback : callbacks) {
             if (callback instanceof NameCallback nameCallback) {
                 // With SASL_PLAIN or SCRAM, we expect the username to be a md5 hash of the api-key, for security and privacy.
-                String md5ApiKey = nameCallback.getName();
+                md5ApiKey = nameCallback.getName();
                 if (md5ApiKey == null || md5ApiKey.isBlank()) {
                     md5ApiKey = nameCallback.getDefaultName();
                 }
@@ -205,7 +210,18 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
                 }
 
                 ctx.setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, md5ApiKey);
-                return Maybe.just(SecurityToken.forMD5ApiKey(md5ApiKey));
+
+            } else if (callback instanceof PlainAuthenticateCallback passwordCallback) {
+                String password = String.valueOf(passwordCallback.password());
+
+                ctx.setInternalAttribute(ATTR_INTERNAL_PASSWORD_API_KEY, password);
+
+                if (DigestUtils.md5DigestAsHex(password.getBytes()).equals(md5ApiKey)) {
+                    return Maybe.just(SecurityToken.forMD5ApiKey(md5ApiKey));
+                } else {
+                    return Maybe.just(SecurityToken.forApiKey(md5ApiKey + ':' + password));
+                }
+
             }
         }
         return Maybe.empty();
@@ -216,9 +232,19 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
         return Completable
             .defer(() -> {
                 String md5ApiKey = ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
-                final Optional<ApiKey> apiKeyOpt = ctx
-                    .getComponent(ApiKeyService.class)
-                    .getByApiAndMd5Key(ctx.getAttribute(ContextAttributes.ATTR_API), md5ApiKey);
+                SecurityToken token = ctx.getInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_SECURITY_TOKEN);
+
+                Optional<ApiKey> apiKeyOpt = Optional.empty();
+
+                if (token.getTokenType().equals(MD5_API_KEY.name())) {
+                    apiKeyOpt = ctx
+                            .getComponent(ApiKeyService.class)
+                            .getByApiAndMd5Key(ctx.getAttribute(ContextAttributes.ATTR_API), md5ApiKey);
+                } else if (token.getTokenType().equals(API_KEY.name())) {
+                    apiKeyOpt = ctx
+                            .getComponent(ApiKeyService.class).getByApiAndKey(
+                                    ctx.getAttribute(ContextAttributes.ATTR_API), md5ApiKey + ':' + ctx.getInternalAttribute(ATTR_INTERNAL_PASSWORD_API_KEY));
+                }
 
                 if (
                     this.handleApiKey(
@@ -228,7 +254,8 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
                                 Callback[] callbacks = ctx.callbacks();
                                 for (Callback callback : callbacks) {
                                     if (callback instanceof PlainAuthenticateCallback plainAuthenticateCallback) {
-                                        if (String.valueOf(plainAuthenticateCallback.password()).equals(apiKey.getKey())) {
+                                        if (String.valueOf(plainAuthenticateCallback.password()).equals(apiKey.getKey()) ||
+                                                apiKey.getKey().endsWith(':' + String.valueOf(plainAuthenticateCallback.password()))) {
                                             plainAuthenticateCallback.authenticated(true);
                                             return true;
                                         }
