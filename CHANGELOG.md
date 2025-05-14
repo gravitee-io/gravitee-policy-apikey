@@ -1,3 +1,10 @@
+# [5.1.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.1...5.1.0) (2025-05-14)
+
+
+### Features
+
+* handle non md5 credentials for kafka authentication ([6ad81eb](https://github.com/gravitee-io/gravitee-policy-apikey/commit/6ad81eba46fe850d0fed906a69a5088a421d6d58))
+
 ## [5.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.0...5.0.1) (2025-01-08)
 
 
