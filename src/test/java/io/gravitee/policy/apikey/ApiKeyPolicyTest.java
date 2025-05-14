@@ -17,6 +17,7 @@ package io.gravitee.policy.apikey;
 
 import static io.gravitee.common.http.GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 import static io.gravitee.gateway.api.ExecutionContext.ATTR_API;
+import static io.gravitee.gateway.reactive.api.context.InternalContextAttributes.ATTR_INTERNAL_SECURITY_TOKEN;
 import static io.gravitee.policy.apikey.ApiKeyPolicy.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,6 +62,8 @@ import org.springframework.util.DigestUtils;
 public class ApiKeyPolicyTest {
 
     private static final String API_KEY = "fbc40d50-5746-40af-b283-d7e99c1775c7";
+    private static final String API_KEY_MD5 = DigestUtils.md5DigestAsHex(API_KEY.getBytes());
+    private static final String CUSTOM_API_KEY = "username:password";
 
     private static final String API_ID = "apiId";
     private static final String PLAN_ID = "planId";
@@ -532,34 +535,68 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void extractSecurityToken_shouldReturnSecurityToken_whenCallbackHasName() {
+        void extractSecurityToken_shouldReturnMD5SecurityToken_whenScram() {
             NameCallback nameCallback = new NameCallback("prompt", "default name");
-            nameCallback.setName(API_KEY);
+            nameCallback.setName(API_KEY_MD5);
 
-            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
+            ScramCredentialCallback scramCredentialCallback = new ScramCredentialCallback();
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback, scramCredentialCallback });
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
             obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
             );
-            verify(ctx).setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, API_KEY);
+        }
+
+        void extractSecurityToken_shouldReturnNonMD5SecurityToken_whenCustomApikey() {
+            NameCallback nameCallback = new NameCallback("prompt", "default name");
+            nameCallback.setName("username");
+
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback, plainAuthenticateCallback });
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(CUSTOM_API_KEY)
+            );
         }
 
         @Test
-        void extractSecurityToken_shouldReturnSecurityToken_whenCallbackHasDefaultName() {
-            NameCallback nameCallback = new NameCallback("prompt", API_KEY);
+        void extractSecurityToken_shouldReturnMD5SecurityToken_whenPlain() {
+            NameCallback nameCallback = new NameCallback("prompt", "default name");
+            nameCallback.setName(API_KEY_MD5);
 
-            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback });
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback(API_KEY.toCharArray());
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback, plainAuthenticateCallback });
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
             obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
             );
-            verify(ctx).setInternalAttribute(ATTR_INTERNAL_MD5_API_KEY, API_KEY);
+        }
+
+        @Test
+        void extractSecurityToken_shouldReturnNonSecurityToken_whenCallbackHasDefaultName() {
+            NameCallback nameCallback = new NameCallback("prompt", "default name");
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
+
+            when(ctx.callbacks()).thenReturn(new Callback[] { nameCallback, plainAuthenticateCallback });
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(token ->
+                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals("default name:password")
+            );
         }
 
         @Test
@@ -587,11 +624,38 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldCompleteWhenApiKeyIsValid_withPlain() {
-            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback(API_KEY.toCharArray());
-
+        void authenticate_shouldCompleteWhenApiKeyIsValid_whenCustomApikey() {
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.API_KEY.name()).tokenValue(CUSTOM_API_KEY).build());
+
+            final ApiKey apiKey = buildApiKey(CUSTOM_API_KEY);
+            when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
+            when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
+            when(apiKeyService.getByApiAndKey(API_ID, CUSTOM_API_KEY)).thenReturn(Optional.of(apiKey));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<Void> obs = cut.authenticate(ctx).test();
+
+            obs.assertComplete();
+            assertThat(plainAuthenticateCallback.authenticated()).isTrue();
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
+            verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+        }
+
+        @Test
+        void authenticate_shouldCompleteWhenApiKeyIsValid_whenPlain() {
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback(API_KEY.toCharArray());
+            when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
+
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
 
@@ -605,16 +669,17 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
             verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         @Test
-        void authenticate_shouldCompleteWhenApiKeyIsValid_withScram() {
+        void authenticate_shouldCompleteWhenApiKeyIsValid_whenScram() {
             ScramCredentialCallback scramCredentialCallback = new ScramCredentialCallback();
-
             when(ctx.callbacks()).thenReturn(new Callback[] { scramCredentialCallback });
+
             when(ctx.saslMechanism()).thenReturn("SCRAM-SHA-256");
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
 
@@ -628,12 +693,12 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
             verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsNotFound() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
             mockApiKeyService(null);
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
@@ -642,12 +707,12 @@ public class ApiKeyPolicyTest {
             obs.assertError(throwable -> throwable.getMessage().equals("API_KEY_INVALID"));
 
             verify(ctx, never()).setAttribute(any(), any());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsNotValid() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
             final ApiKey apiKey = buildApiKey();
             apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
             mockApiKeyService(apiKey);
@@ -661,12 +726,12 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
             verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsRevoked() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
             final ApiKey apiKey = buildApiKey();
             apiKey.setRevoked(true);
             mockApiKeyService(apiKey);
@@ -680,15 +745,15 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
             verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsValidButPasswordDoesNotCorrespond_withPlain() {
-            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
+            PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("UNKNOWN_API_KEY".toCharArray());
 
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_MD5_API_KEY)).thenReturn(API_KEY);
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
+                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
 
@@ -701,24 +766,27 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, apiKey.getSubscription());
             verify(ctx).setAttribute(ContextAttributes.ATTR_PLAN, apiKey.getPlan());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
-            verify(ctx).removeInternalAttribute(ATTR_INTERNAL_MD5_API_KEY);
         }
 
         private void mockApiKeyService(ApiKey apiKey) {
             when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
             when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
-            when(apiKeyService.getByApiAndMd5Key(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
+            when(apiKeyService.getByApiAndMd5Key(API_ID, API_KEY_MD5)).thenReturn(Optional.ofNullable(apiKey));
         }
     }
 
     private ApiKey buildApiKey() {
+        return buildApiKey(API_KEY);
+    }
+
+    private ApiKey buildApiKey(String key) {
         final ApiKey apiKey = new ApiKey();
         apiKey.setRevoked(false);
         apiKey.setExpireAt(EXPIRE_AT);
         apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setSubscription(SUBSCRIPTION_ID);
-        apiKey.setKey(API_KEY);
+        apiKey.setKey(key);
         return apiKey;
     }
 }
