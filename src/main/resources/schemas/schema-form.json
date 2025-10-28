@@ -5,6 +5,12 @@
         "propagateApiKey": {
             "title": "Propagate API Key to upstream API",
             "type": "boolean"
+        },
+        "apiKeyHeader": {
+            "title": "API Key Header",
+            "description": "Enter a custom header name to override the default value",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9!#$%&'*+\\-.^`|~]+$"
         }
     },
     "additionalProperties": false

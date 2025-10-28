@@ -26,9 +26,9 @@ import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
 import org.springframework.core.env.Environment;
+import org.springframework.util.StringUtils;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -45,13 +45,12 @@ public class ApiKeyPolicyV3 {
     /**
      * Policy configuration
      */
-    private final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
+    protected final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
     static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
     static final String API_KEY_HEADER_PROPERTY = "policy.api-key.header";
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
-    static final String DEFAULT_API_KEY_HEADER_PARAMETER = GraviteeHttpHeader.X_GRAVITEE_API_KEY;
 
     public ApiKeyPolicyV3(ApiKeyPolicyConfiguration apiKeyPolicyConfiguration) {
         this.apiKeyPolicyConfiguration = apiKeyPolicyConfiguration;
@@ -96,25 +95,39 @@ public class ApiKeyPolicyV3 {
     }
 
     private String lookForApiKey(ExecutionContext executionContext, Request request) {
-        if (API_KEY_HEADER == null) {
-            Environment environment = executionContext.getComponent(Environment.class);
-            API_KEY_HEADER = environment.getProperty(API_KEY_HEADER_PROPERTY, DEFAULT_API_KEY_HEADER_PARAMETER);
-            API_KEY_QUERY_PARAMETER = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
+        final Environment environment = executionContext.getComponent(Environment.class);
+
+        // If a custom header is defined in the policy configuration, use it exclusively.
+        if (apiKeyPolicyConfiguration != null && StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())) {
+            final String apiKeyHeader = apiKeyPolicyConfiguration.getApiKeyHeader();
+            String apiKey = request.headers().get(apiKeyHeader);
+
+            if (StringUtils.hasText(apiKey)) {
+                if (!apiKeyPolicyConfiguration.isPropagateApiKey()) {
+                    request.headers().remove(apiKeyHeader);
+                }
+                return apiKey;
+            }
         }
+
+        // If no custom header is configured, use the default behavior (global header and query param).
+        final String apiKeyHeader = environment.getProperty(API_KEY_HEADER_PROPERTY, GraviteeHttpHeader.X_GRAVITEE_API_KEY);
+        final String apiKeyQueryParameter = environment.getProperty(API_KEY_QUERY_PARAMETER_PROPERTY, DEFAULT_API_KEY_QUERY_PARAMETER);
 
         // 1_ First, search in HTTP headers
-        String apiKey = request.headers().getFirst(API_KEY_HEADER);
-        if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
-            request.headers().remove(API_KEY_HEADER);
+        String apiKey = request.headers().get(apiKeyHeader);
+        if (apiKey != null && !apiKey.isEmpty()) {
+            if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
+                request.headers().remove(apiKeyHeader);
+            }
+            return apiKey;
         }
 
-        if (apiKey == null || apiKey.isEmpty()) {
-            // 2_ If not found, search in query parameters
-            apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
+        // 2_ If not found, search in query parameters
+        apiKey = request.parameters().getFirst(apiKeyQueryParameter);
 
-            if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
-                request.parameters().remove(API_KEY_QUERY_PARAMETER);
-            }
+        if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
+            request.parameters().remove(apiKeyQueryParameter);
         }
 
         return apiKey;

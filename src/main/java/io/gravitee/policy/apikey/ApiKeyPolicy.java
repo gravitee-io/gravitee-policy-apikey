@@ -38,6 +38,7 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import java.security.SecureRandom;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.security.auth.callback.Callback;
@@ -50,6 +51,7 @@ import org.apache.kafka.common.security.scram.ScramCredentialCallback;
 import org.apache.kafka.common.security.scram.internals.ScramFormatter;
 import org.apache.kafka.common.security.scram.internals.ScramMechanism;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -66,11 +68,9 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
     static final String DEFAULT_API_KEY_HEADER_PARAMETER = GraviteeHttpHeader.X_GRAVITEE_API_KEY;
     static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
-    private final boolean propagateApiKey;
 
     public ApiKeyPolicy(ApiKeyPolicyConfiguration configuration) {
         super(configuration);
-        this.propagateApiKey = configuration != null && configuration.isPropagateApiKey();
     }
 
     @Override
@@ -162,31 +162,39 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
 
         final HttpPlainRequest request = ctx.request();
 
+        // If a custom header is defined in the policy configuration, use it exclusively.
+        if (apiKeyPolicyConfiguration != null && StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())) {
+            final String apiKeyHeaderName = apiKeyPolicyConfiguration.getApiKeyHeader();
+            if (request.headers().contains(apiKeyHeaderName)) {
+                apiKey = request.headers().get(apiKeyHeaderName);
+                return Optional.of(Objects.requireNonNullElse(apiKey, ""));
+            }
+            return Optional.empty();
+        }
+
         // 2_ Second, search in HTTP headers
         if (request.headers().contains(API_KEY_HEADER)) {
             apiKey = request.headers().get(API_KEY_HEADER);
-            if (apiKey == null) {
-                // Header is present but empty so init apiKey with empty string
-                apiKey = "";
-            }
+            return Optional.of(Objects.requireNonNullElse(apiKey, ""));
         }
 
         // 3_ If not found, search in query parameters
-        if (apiKey == null && request.parameters().containsKey(API_KEY_QUERY_PARAMETER)) {
+        if (request.parameters().containsKey(API_KEY_QUERY_PARAMETER)) {
             apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
-            if (apiKey == null) {
-                // Header is present but empty so init apiKey with empty string
-                apiKey = "";
-            }
+            // If query parameter is present but empty, init apiKey with empty string
+            return Optional.of(Objects.requireNonNullElse(apiKey, ""));
         }
 
-        return Optional.ofNullable(apiKey);
+        return Optional.empty();
     }
 
     private void cleanupApiKey(HttpPlainExecutionContext ctx) {
-        if (!propagateApiKey) {
+        if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
             ctx.request().headers().remove(API_KEY_HEADER);
             ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
+            if (apiKeyPolicyConfiguration != null && apiKeyPolicyConfiguration.getApiKeyHeader() != null) {
+                ctx.request().headers().remove(apiKeyPolicyConfiguration.getApiKeyHeader());
+            }
         }
         ctx.removeInternalAttribute(ATTR_INTERNAL_API_KEY);
     }
