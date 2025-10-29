@@ -531,6 +531,7 @@ public class ApiKeyPolicyTest {
             mockApiKeyService(apiKey);
             final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
             when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
+            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(true);
             final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
             final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
@@ -570,6 +571,55 @@ public class ApiKeyPolicyTest {
                         return true;
                     })
                 );
+        }
+
+        @Test
+        void shouldFailWhenCustomHeaderIsSetButDisabled() {
+            final String customHeader = "X-Custom-Header";
+            final HttpHeaders headers = HttpHeaders.create();
+            headers.add(customHeader, API_KEY);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
+            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
+            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(false);
+            final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx)
+                .interruptWith(
+                    argThat(failure -> {
+                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                        assertEquals("API_KEY_MISSING", failure.key());
+                        return true;
+                    })
+                );
+        }
+
+        @Test
+        void shouldSucceedWhenCustomHeaderIsSetAndEnabled() {
+            final String customHeader = "X-Custom-Header";
+            final HttpHeaders headers = HttpHeaders.create();
+            headers.add(customHeader, API_KEY);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+            final ApiKey apiKey = buildApiKey();
+            mockApiKeyService(apiKey);
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
+            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
+            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(true);
+            final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertResult();
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx, never()).interruptWith(any());
         }
     }
 

@@ -6,11 +6,23 @@
             "title": "Propagate API Key to upstream API",
             "type": "boolean"
         },
+        "enableCustomApiKeyHeader": {
+            "title": "Custom API Key header",
+            "description": "Overrides the default API Key header",
+            "type": "boolean"
+        },
         "apiKeyHeader": {
             "title": "API Key Header",
             "description": "Enter a custom header name to override the default value",
             "type": "string",
-            "pattern": "^[a-zA-Z0-9!#$%&'*+\\-.^`|~]+$"
+            "pattern": "^[a-zA-Z0-9!#$%&'*+\\-.^`|~]+$",
+            "gioConfig": {
+                "disableIf": {
+                    "$eq": {
+                        "value.enableCustomApiKeyHeader": false
+                    }
+                }
+            }
         }
     },
     "additionalProperties": false

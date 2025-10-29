@@ -29,5 +29,7 @@ public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     private boolean propagateApiKey = false;
 
+    private boolean enableCustomApiKeyHeader = false;
+
     private String apiKeyHeader;
 }

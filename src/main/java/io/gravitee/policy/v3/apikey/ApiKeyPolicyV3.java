@@ -98,7 +98,11 @@ public class ApiKeyPolicyV3 {
         final Environment environment = executionContext.getComponent(Environment.class);
 
         // If a custom header is defined in the policy configuration, use it exclusively.
-        if (apiKeyPolicyConfiguration != null && StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())) {
+        if (
+            apiKeyPolicyConfiguration != null &&
+            apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader() &&
+            StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())
+        ) {
             final String apiKeyHeader = apiKeyPolicyConfiguration.getApiKeyHeader();
             String apiKey = request.headers().get(apiKeyHeader);
 

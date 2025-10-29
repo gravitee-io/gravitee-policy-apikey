@@ -163,10 +163,15 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
         final HttpPlainRequest request = ctx.request();
 
         // If a custom header is defined in the policy configuration, use it exclusively.
-        if (apiKeyPolicyConfiguration != null && StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())) {
+        if (
+            apiKeyPolicyConfiguration != null &&
+            apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader() &&
+            StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())
+        ) {
             final String apiKeyHeaderName = apiKeyPolicyConfiguration.getApiKeyHeader();
             if (request.headers().contains(apiKeyHeaderName)) {
                 apiKey = request.headers().get(apiKeyHeaderName);
+                // Header is present but empty so init apiKey with empty string
                 return Optional.of(Objects.requireNonNullElse(apiKey, ""));
             }
             return Optional.empty();
@@ -175,6 +180,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
         // 2_ Second, search in HTTP headers
         if (request.headers().contains(API_KEY_HEADER)) {
             apiKey = request.headers().get(API_KEY_HEADER);
+            // Header is present but empty so init apiKey with empty string
             return Optional.of(Objects.requireNonNullElse(apiKey, ""));
         }
 
