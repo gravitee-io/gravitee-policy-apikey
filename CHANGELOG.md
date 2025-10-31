@@ -1,3 +1,10 @@
+# [5.2.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.1.0...5.2.0) (2025-10-31)
+
+
+### Features
+
+* make api key header configurable ([bddfa1d](https://github.com/gravitee-io/gravitee-policy-apikey/commit/bddfa1d49b100df0068ef848ca07a3f520f5dbec))
+
 # [5.1.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.0.1...5.1.0) (2025-05-14)
 
 
