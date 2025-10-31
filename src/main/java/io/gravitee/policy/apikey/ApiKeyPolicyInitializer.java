@@ -21,7 +21,6 @@ import io.gravitee.node.api.configuration.Configuration;
 import io.gravitee.policy.api.PolicyContext;
 import io.gravitee.policy.api.PolicyContextProvider;
 import io.gravitee.policy.api.PolicyContextProviderAware;
-import org.springframework.core.env.Environment;
 
 /**
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
@@ -32,7 +31,7 @@ public class ApiKeyPolicyInitializer implements PolicyContext, PolicyContextProv
     private Configuration configuration;
 
     @Override
-    public void onActivation() throws Exception {
+    public void onActivation() {
         if (API_KEY_HEADER == null || API_KEY_QUERY_PARAMETER == null) {
             if (configuration == null) {
                 API_KEY_HEADER = DEFAULT_API_KEY_HEADER_PARAMETER;
@@ -45,7 +44,7 @@ public class ApiKeyPolicyInitializer implements PolicyContext, PolicyContextProv
     }
 
     @Override
-    public void onDeactivation() throws Exception {
+    public void onDeactivation() {
         // Nothing to do.
     }
 

@@ -16,20 +16,20 @@
 package io.gravitee.policy.apikey.configuration;
 
 import io.gravitee.policy.api.PolicyConfiguration;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
  * @author GraviteeSource Team
  */
+@Getter
+@Setter
 public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     private boolean propagateApiKey = false;
 
-    public boolean isPropagateApiKey() {
-        return propagateApiKey;
-    }
+    private boolean enableCustomApiKeyHeader = false;
 
-    public void setPropagateApiKey(boolean propagateApiKey) {
-        this.propagateApiKey = propagateApiKey;
-    }
+    private String apiKeyHeader;
 }
