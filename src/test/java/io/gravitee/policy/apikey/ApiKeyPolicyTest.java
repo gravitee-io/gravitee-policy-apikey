@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.helpers.NOPLogger;
 import org.springframework.core.env.Environment;
 import org.springframework.util.DigestUtils;
 
@@ -100,6 +101,7 @@ public class ApiKeyPolicyTest {
 
             lenient().when(ctx.request()).thenReturn(request);
             lenient().when(ctx.timestamp()).thenReturn(System.currentTimeMillis());
+            lenient().when(ctx.withLogger(any())).thenReturn(NOPLogger.NOP_LOGGER);
 
             // Initialize default header and query param names to get API Key from.
             initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, DEFAULT_API_KEY_QUERY_PARAMETER);
