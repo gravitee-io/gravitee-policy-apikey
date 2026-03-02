@@ -305,18 +305,17 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("Unauthorized", failure.message());
-                        assertEquals("API_KEY_MISSING", failure.key());
-                        assertNull(failure.parameters());
-                        assertNull(failure.contentType());
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("Unauthorized", failure.message());
+                    assertEquals("API_KEY_MISSING", failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
 
-                        return true;
-                    })
-                );
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -334,18 +333,17 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("Unauthorized", failure.message());
-                        assertEquals("API_KEY_INVALID", failure.key());
-                        assertNull(failure.parameters());
-                        assertNull(failure.contentType());
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("Unauthorized", failure.message());
+                    assertEquals("API_KEY_INVALID", failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
 
-                        return true;
-                    })
-                );
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -363,18 +361,17 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("Unauthorized", failure.message());
-                        assertEquals("API_KEY_INVALID", failure.key());
-                        assertNull(failure.parameters());
-                        assertNull(failure.contentType());
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("Unauthorized", failure.message());
+                    assertEquals("API_KEY_INVALID", failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
 
-                        return true;
-                    })
-                );
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -391,18 +388,17 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("Unauthorized", failure.message());
-                        assertEquals("API_KEY_INVALID", failure.key());
-                        assertNull(failure.parameters());
-                        assertNull(failure.contentType());
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("Unauthorized", failure.message());
+                    assertEquals("API_KEY_INVALID", failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
 
-                        return true;
-                    })
-                );
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -416,18 +412,17 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("Unauthorized", failure.message());
-                        assertEquals("API_KEY_INVALID", failure.key());
-                        assertNull(failure.parameters());
-                        assertNull(failure.contentType());
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("Unauthorized", failure.message());
+                    assertEquals("API_KEY_INVALID", failure.key());
+                    assertNull(failure.parameters());
+                    assertNull(failure.contentType());
 
-                        return true;
-                    })
-                );
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -437,8 +432,8 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+            obs.assertValue(
+                token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
         }
 
@@ -450,8 +445,8 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+            obs.assertValue(
+                token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
         }
 
@@ -464,8 +459,8 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+            obs.assertValue(
+                token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
             );
         }
 
@@ -563,14 +558,13 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("API_KEY_INVALID", failure.key());
-                        return true;
-                    })
-                );
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API_KEY_INVALID", failure.key());
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -590,14 +584,13 @@ public class ApiKeyPolicyTest {
 
             obs.assertFailure(Throwable.class);
 
-            verify(ctx)
-                .interruptWith(
-                    argThat(failure -> {
-                        assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                        assertEquals("API_KEY_MISSING", failure.key());
-                        return true;
-                    })
-                );
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API_KEY_MISSING", failure.key());
+                    return true;
+                })
+            );
         }
 
         @Test
@@ -649,8 +642,9 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
+            obs.assertValue(
+                token ->
+                    token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
             );
         }
 
@@ -665,8 +659,8 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(CUSTOM_API_KEY)
+            obs.assertValue(
+                token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(CUSTOM_API_KEY)
             );
         }
 
@@ -682,8 +676,9 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
+            obs.assertValue(
+                token ->
+                    token.getTokenType().equals(SecurityToken.TokenType.MD5_API_KEY.name()) && token.getTokenValue().equals(API_KEY_MD5)
             );
         }
 
@@ -697,8 +692,10 @@ public class ApiKeyPolicyTest {
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
-            obs.assertValue(token ->
-                token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals("default name:password")
+            obs.assertValue(
+                token ->
+                    token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) &&
+                    token.getTokenValue().equals("default name:password")
             );
         }
 
@@ -731,8 +728,9 @@ public class ApiKeyPolicyTest {
             PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("password".toCharArray());
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
 
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.API_KEY.name()).tokenValue(CUSTOM_API_KEY).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.API_KEY.name()).tokenValue(CUSTOM_API_KEY).build()
+            );
 
             final ApiKey apiKey = buildApiKey(CUSTOM_API_KEY);
             when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
@@ -756,8 +754,9 @@ public class ApiKeyPolicyTest {
             PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback(API_KEY.toCharArray());
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
 
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
 
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
@@ -780,8 +779,9 @@ public class ApiKeyPolicyTest {
             when(ctx.callbacks()).thenReturn(new Callback[] { scramCredentialCallback });
 
             when(ctx.saslMechanism()).thenReturn("SCRAM-SHA-256");
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
 
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
@@ -800,8 +800,9 @@ public class ApiKeyPolicyTest {
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsNotFound() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
             mockApiKeyService(null);
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
@@ -814,8 +815,9 @@ public class ApiKeyPolicyTest {
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsNotValid() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
             final ApiKey apiKey = buildApiKey();
             apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
             mockApiKeyService(apiKey);
@@ -833,8 +835,9 @@ public class ApiKeyPolicyTest {
 
         @Test
         void authenticate_shouldNotCompleteWhenApiKeyIsRevoked() {
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
             final ApiKey apiKey = buildApiKey();
             apiKey.setRevoked(true);
             mockApiKeyService(apiKey);
@@ -855,8 +858,9 @@ public class ApiKeyPolicyTest {
             PlainAuthenticateCallback plainAuthenticateCallback = new PlainAuthenticateCallback("UNKNOWN_API_KEY".toCharArray());
 
             when(ctx.callbacks()).thenReturn(new Callback[] { plainAuthenticateCallback });
-            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN))
-                .thenReturn(SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build());
+            when(ctx.getInternalAttribute(ATTR_INTERNAL_SECURITY_TOKEN)).thenReturn(
+                SecurityToken.builder().tokenType(SecurityToken.TokenType.MD5_API_KEY.name()).tokenValue(API_KEY_MD5).build()
+            );
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
 

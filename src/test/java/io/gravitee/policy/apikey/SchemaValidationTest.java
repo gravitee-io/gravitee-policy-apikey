@@ -44,23 +44,22 @@ public class SchemaValidationTest {
 
         @Test
         void should_validate_valid_configuration() throws JSONException {
-            String json =
-                """
-                         {
-                          "propagateApiKey": true,
-                          "enableCustomApiKeyHeader": true,
-                          "apiKeyHeader": "X-My-Api-Key"
-                        }
-                        """;
+            String json = """
+                 {
+                  "propagateApiKey": true,
+                  "enableCustomApiKeyHeader": true,
+                  "apiKeyHeader": "X-My-Api-Key"
+                }
+                """;
             String result = validator.validate(configurationSchema, json);
             JSONAssert.assertEquals(
                 """
-                        {
-                          "propagateApiKey": true,
-                          "enableCustomApiKeyHeader": true,
-                          "apiKeyHeader": "X-My-Api-Key"
-                        }
-                        """,
+                {
+                  "propagateApiKey": true,
+                  "enableCustomApiKeyHeader": true,
+                  "apiKeyHeader": "X-My-Api-Key"
+                }
+                """,
                 result,
                 true
             );
@@ -68,13 +67,12 @@ public class SchemaValidationTest {
 
         @Test
         void should_validate_valid_configuration_without_custom_header() throws JSONException {
-            String json =
-                """
-                         {
-                          "propagateApiKey": false,
-                          "enableCustomApiKeyHeader": false
-                        }
-                        """;
+            String json = """
+                 {
+                  "propagateApiKey": false,
+                  "enableCustomApiKeyHeader": false
+                }
+                """;
             String result = validator.validate(configurationSchema, json);
             JSONAssert.assertEquals(
                 """
@@ -90,8 +88,7 @@ public class SchemaValidationTest {
 
         @Test
         void should_not_validate_invalid_api_key_header_pattern() {
-            String json =
-                """
+            String json = """
                  {
                   "propagateApiKey": true,
                   "enableCustomApiKeyHeader": true,
