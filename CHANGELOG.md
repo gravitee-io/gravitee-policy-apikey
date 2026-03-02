@@ -1,3 +1,20 @@
+# [6.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.2.0...6.0.0-alpha.1) (2026-03-02)
+
+
+### chore
+
+* bump dependencies ([44de7fa](https://github.com/gravitee-io/gravitee-policy-apikey/commit/44de7faace23ade34feb4b2e2c4f9a9eb2359315))
+
+
+### Features
+
+* use new logging system ([19b3a62](https://github.com/gravitee-io/gravitee-policy-apikey/commit/19b3a62273a29ec8c018dc4c9bdad52c417b7ad7))
+
+
+### BREAKING CHANGES
+
+* bump gravitee-parent
+
 # [5.2.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.1.0...5.2.0) (2025-10-31)
 
 
