@@ -43,8 +43,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.NameCallback;
+import lombok.CustomLog;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.security.plain.PlainAuthenticateCallback;
 import org.apache.kafka.common.security.scram.ScramCredential;
 import org.apache.kafka.common.security.scram.ScramCredentialCallback;
@@ -58,7 +58,7 @@ import org.springframework.util.StringUtils;
  * @author Jeoffrey HAEYAERT (jeoffrey.haeyaert at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Slf4j
+@CustomLog
 public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, KafkaSecurityPolicy {
 
     static final String ATTR_API_KEY = ContextAttributes.ATTR_PREFIX + "api-key";
@@ -136,7 +136,7 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
                     return Completable.complete();
                 }
             } catch (Throwable t) {
-                log.warn("An exception occurred when trying to verify apikey.", t);
+                ctx.withLogger(log).warn("An exception occurred when trying to verify apikey.", t);
             }
 
             return interrupt401(ctx, API_KEY_INVALID_KEY);
