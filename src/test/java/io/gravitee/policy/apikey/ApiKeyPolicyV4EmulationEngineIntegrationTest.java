@@ -269,14 +269,17 @@ public class ApiKeyPolicyV4EmulationEngineIntegrationTest extends AbstractPolicy
 
     protected OngoingStubbing<Optional<Subscription>> whenSearchingSubscription(ApiKey apiKey) {
         return when(
-            getBean(SubscriptionService.class)
-                .getByApiAndSecurityToken(eq(apiKey.getApi()), securityTokenMatcher(apiKey.getKey()), eq(apiKey.getPlan()))
+            getBean(SubscriptionService.class).getByApiAndSecurityToken(
+                eq(apiKey.getApi()),
+                securityTokenMatcher(apiKey.getKey()),
+                eq(apiKey.getPlan())
+            )
         );
     }
 
     private SecurityToken securityTokenMatcher(String apiKeyValue) {
-        return argThat(securityToken ->
-            securityToken.getTokenType().equals(API_KEY.name()) && securityToken.getTokenValue().equals(apiKeyValue)
+        return argThat(
+            securityToken -> securityToken.getTokenType().equals(API_KEY.name()) && securityToken.getTokenValue().equals(apiKeyValue)
         );
     }
 }

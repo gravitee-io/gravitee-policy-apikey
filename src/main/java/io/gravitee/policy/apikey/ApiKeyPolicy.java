@@ -119,30 +119,28 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     }
 
     private Completable handleSecurity(final HttpPlainExecutionContext ctx) {
-        return Completable
-            .defer(() -> {
-                try {
-                    Optional<String> requestApiKey = extractApiKey(ctx);
+        return Completable.defer(() -> {
+            try {
+                Optional<String> requestApiKey = extractApiKey(ctx);
 
-                    if (requestApiKey.isEmpty()) {
-                        // The API Key is required
-                        return interrupt401(ctx, API_KEY_MISSING_KEY);
-                    }
-
-                    final Optional<ApiKey> apiKeyOpt = ctx
-                        .getComponent(ApiKeyService.class)
-                        .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), requestApiKey.get());
-
-                    if (this.handleApiKey(apiKeyOpt, ctx, (apiKey -> true))) {
-                        return Completable.complete();
-                    }
-                } catch (Throwable t) {
-                    log.warn("An exception occurred when trying to verify apikey.", t);
+                if (requestApiKey.isEmpty()) {
+                    // The API Key is required
+                    return interrupt401(ctx, API_KEY_MISSING_KEY);
                 }
 
-                return interrupt401(ctx, API_KEY_INVALID_KEY);
-            })
-            .doOnTerminate(() -> cleanupApiKey(ctx));
+                final Optional<ApiKey> apiKeyOpt = ctx
+                    .getComponent(ApiKeyService.class)
+                    .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), requestApiKey.get());
+
+                if (this.handleApiKey(apiKeyOpt, ctx, (apiKey -> true))) {
+                    return Completable.complete();
+                }
+            } catch (Throwable t) {
+                log.warn("An exception occurred when trying to verify apikey.", t);
+            }
+
+            return interrupt401(ctx, API_KEY_INVALID_KEY);
+        }).doOnTerminate(() -> cleanupApiKey(ctx));
     }
 
     private boolean isApiKeyValid(BaseExecutionContext ctx, ApiKey apiKey) {
@@ -245,42 +243,36 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
             Optional<ApiKey> apiKeyOpt = Optional.empty();
 
             if (token.getTokenType().equals(MD5_API_KEY.name())) {
-                apiKeyOpt =
-                    ctx
-                        .getComponent(ApiKeyService.class)
-                        .getByApiAndMd5Key(ctx.getAttribute(ContextAttributes.ATTR_API), token.getTokenValue());
+                apiKeyOpt = ctx
+                    .getComponent(ApiKeyService.class)
+                    .getByApiAndMd5Key(ctx.getAttribute(ContextAttributes.ATTR_API), token.getTokenValue());
             } else if (token.getTokenType().equals(API_KEY.name())) {
-                apiKeyOpt =
-                    ctx
-                        .getComponent(ApiKeyService.class)
-                        .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), token.getTokenValue());
+                apiKeyOpt = ctx
+                    .getComponent(ApiKeyService.class)
+                    .getByApiAndKey(ctx.getAttribute(ContextAttributes.ATTR_API), token.getTokenValue());
             }
 
             if (
-                this.handleApiKey(
-                        apiKeyOpt,
-                        ctx,
-                        apiKey -> {
-                            Callback[] callbacks = ctx.callbacks();
-                            for (Callback callback : callbacks) {
-                                if (callback instanceof PlainAuthenticateCallback plainAuthenticateCallback) {
-                                    // apikey can be equal to the password (in case MD5 is used) or ends with the password (in case of Custom ApiKey)
-                                    if (apiKey.getKey().endsWith(String.valueOf(plainAuthenticateCallback.password()))) {
-                                        plainAuthenticateCallback.authenticated(true);
-                                        return true;
-                                    }
-                                } else if (callback instanceof ScramCredentialCallback scramCredentialCallback) {
-                                    ScramCredential scramCredential = createScramCredential(
-                                        apiKey.getKey(),
-                                        ScramMechanism.forMechanismName(ctx.saslMechanism())
-                                    );
-                                    scramCredentialCallback.scramCredential(scramCredential);
-                                    return true;
-                                }
+                this.handleApiKey(apiKeyOpt, ctx, apiKey -> {
+                    Callback[] callbacks = ctx.callbacks();
+                    for (Callback callback : callbacks) {
+                        if (callback instanceof PlainAuthenticateCallback plainAuthenticateCallback) {
+                            // apikey can be equal to the password (in case MD5 is used) or ends with the password (in case of Custom ApiKey)
+                            if (apiKey.getKey().endsWith(String.valueOf(plainAuthenticateCallback.password()))) {
+                                plainAuthenticateCallback.authenticated(true);
+                                return true;
                             }
-                            return false;
+                        } else if (callback instanceof ScramCredentialCallback scramCredentialCallback) {
+                            ScramCredential scramCredential = createScramCredential(
+                                apiKey.getKey(),
+                                ScramMechanism.forMechanismName(ctx.saslMechanism())
+                            );
+                            scramCredentialCallback.scramCredential(scramCredential);
+                            return true;
                         }
-                    )
+                    }
+                    return false;
+                })
             ) {
                 return Completable.complete();
             }
