@@ -100,5 +100,68 @@ public class SchemaValidationTest {
                 .isInstanceOf(InvalidJsonException.class)
                 .hasMessageContaining("#/apiKeyHeader: string [Invalid Header!] does not match pattern");
         }
+
+        @Test
+        void should_validate_configuration_with_source_header() throws JSONException {
+            String json = """
+                {
+                  "propagateApiKey": false,
+                  "source": "HEADER",
+                  "apiKeyHeader": "X-My-Key"
+                }
+                """;
+            String result = validator.validate(configurationSchema, json);
+            JSONAssert.assertEquals(json, result, true);
+        }
+
+        @Test
+        void should_validate_configuration_with_source_bearer() throws JSONException {
+            String json = """
+                {
+                  "propagateApiKey": true,
+                  "source": "BEARER"
+                }
+                """;
+            String result = validator.validate(configurationSchema, json);
+            JSONAssert.assertEquals(json, result, true);
+        }
+
+        @Test
+        void should_validate_configuration_with_source_query_parameter() throws JSONException {
+            String json = """
+                {
+                  "propagateApiKey": false,
+                  "source": "QUERY_PARAMETER"
+                }
+                """;
+            String result = validator.validate(configurationSchema, json);
+            JSONAssert.assertEquals(json, result, true);
+        }
+
+        @Test
+        void should_not_validate_invalid_source_value() {
+            String json = """
+                {
+                  "source": "NOT_A_VALID_SOURCE"
+                }
+                """;
+            assertThatThrownBy(() -> validator.validate(configurationSchema, json))
+                .isInstanceOf(InvalidJsonException.class)
+                .hasMessageContaining("#/source");
+        }
+
+        @Test
+        void should_validate_combined_legacy_and_new_fields() throws JSONException {
+            String json = """
+                {
+                  "propagateApiKey": false,
+                  "source": "BEARER",
+                  "enableCustomApiKeyHeader": true,
+                  "apiKeyHeader": "X-My-Key"
+                }
+                """;
+            String result = validator.validate(configurationSchema, json);
+            JSONAssert.assertEquals(json, result, true);
+        }
     }
 }
