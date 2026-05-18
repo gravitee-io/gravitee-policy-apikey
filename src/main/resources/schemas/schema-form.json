@@ -6,20 +6,40 @@
             "title": "Propagate API Key to upstream API",
             "type": "boolean"
         },
+        "source": {
+            "type": "string",
+            "enum": ["HEADER", "BEARER", "QUERY_PARAMETER"],
+            "default": "HEADER",
+            "gioConfig": {
+                "enumLabelMap": {
+                    "HEADER": "Get API key in headers (with fallback on query parameter 'api-key')",
+                    "BEARER": "Get API key in authorization Bearer header (incompatible with APIv2 and OAuth)",
+                    "QUERY_PARAMETER": "Get API key in query parameter"
+                }
+            }
+        },
         "enableCustomApiKeyHeader": {
             "title": "Custom API Key header",
             "description": "Overrides the default API Key header",
-            "type": "boolean"
+            "type": "boolean",
+            "gioConfig": {
+                "displayIf": {
+                    "$eq": {
+                        "value.source": "BAD_VALUE"
+                    }
+                }
+            }
         },
         "apiKeyHeader": {
             "title": "API Key Header",
-            "description": "Enter a custom header name to override the default value",
+            "description": "Enter a header name",
             "type": "string",
+            "default": "X-Gravitee-Api-Key",
             "pattern": "^[a-zA-Z0-9!#$%&'*+\\-.^`|~]+$",
             "gioConfig": {
-                "disableIf": {
+                "displayIf": {
                     "$eq": {
-                        "value.enableCustomApiKeyHeader": false
+                        "value.source": "HEADER"
                     }
                 }
             }

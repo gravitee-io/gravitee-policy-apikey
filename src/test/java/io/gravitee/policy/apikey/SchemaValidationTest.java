@@ -56,6 +56,7 @@ public class SchemaValidationTest {
                 """
                 {
                   "propagateApiKey": true,
+                  "source": "HEADER",
                   "enableCustomApiKeyHeader": true,
                   "apiKeyHeader": "X-My-Api-Key"
                 }
@@ -78,7 +79,9 @@ public class SchemaValidationTest {
                 """
                 {
                   "propagateApiKey": false,
-                  "enableCustomApiKeyHeader": false
+                  "source": "HEADER",
+                  "enableCustomApiKeyHeader": false,
+                  "apiKeyHeader": "X-Gravitee-Api-Key"
                 }
                 """,
                 result,
@@ -123,7 +126,17 @@ public class SchemaValidationTest {
                 }
                 """;
             String result = validator.validate(configurationSchema, json);
-            JSONAssert.assertEquals(json, result, true);
+            JSONAssert.assertEquals(
+                """
+                {
+                  "propagateApiKey": true,
+                  "source": "BEARER",
+                  "apiKeyHeader": "X-Gravitee-Api-Key"
+                }
+                """,
+                result,
+                true
+            );
         }
 
         @Test
@@ -135,7 +148,17 @@ public class SchemaValidationTest {
                 }
                 """;
             String result = validator.validate(configurationSchema, json);
-            JSONAssert.assertEquals(json, result, true);
+            JSONAssert.assertEquals(
+                """
+                {
+                  "propagateApiKey": false,
+                  "source": "QUERY_PARAMETER",
+                  "apiKeyHeader": "X-Gravitee-Api-Key"
+                }
+                """,
+                result,
+                true
+            );
         }
 
         @Test

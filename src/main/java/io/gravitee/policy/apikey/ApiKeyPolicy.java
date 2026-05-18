@@ -33,12 +33,12 @@ import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.gateway.reactive.api.policy.http.HttpSecurityPolicy;
 import io.gravitee.gateway.reactive.api.policy.kafka.KafkaSecurityPolicy;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.configuration.ApiKeySource;
 import io.gravitee.policy.v3.apikey.ApiKeyPolicyV3;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import java.security.SecureRandom;
 import java.util.Date;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.security.auth.callback.Callback;
@@ -50,6 +50,7 @@ import org.apache.kafka.common.security.scram.ScramCredential;
 import org.apache.kafka.common.security.scram.ScramCredentialCallback;
 import org.apache.kafka.common.security.scram.internals.ScramFormatter;
 import org.apache.kafka.common.security.scram.internals.ScramMechanism;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
@@ -67,10 +68,14 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
     static final String DEFAULT_API_KEY_HEADER_PARAMETER = GraviteeHttpHeader.X_GRAVITEE_API_KEY;
+    static final String AUTHORIZATION_HEADER = "Authorization";
+    static final String BEARER_PREFIX = "Bearer ";
+
+    @Nullable
     static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
 
-    public ApiKeyPolicy(ApiKeyPolicyConfiguration configuration) {
-        super(configuration);
+    public ApiKeyPolicy(@Nullable ApiKeyPolicyConfiguration configuration) {
+        super(configuration != null ? configuration : ApiKeyPolicyConfiguration.DEFAULT);
     }
 
     @Override
@@ -152,52 +157,73 @@ public class ApiKeyPolicy extends ApiKeyPolicyV3 implements HttpSecurityPolicy, 
     }
 
     private Optional<String> extractApiKey(HttpPlainExecutionContext ctx) {
-        // 1_ First, check if already resolved.
         String apiKey = ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY);
         if (apiKey != null) {
             return Optional.of(apiKey);
         }
 
         final HttpPlainRequest request = ctx.request();
+        final ApiKeySource source = apiKeyPolicyConfiguration.resolveSource();
 
-        // If a custom header is defined in the policy configuration, use it exclusively.
-        if (
-            apiKeyPolicyConfiguration != null &&
-            apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader() &&
-            StringUtils.hasText(apiKeyPolicyConfiguration.getApiKeyHeader())
-        ) {
-            final String apiKeyHeaderName = apiKeyPolicyConfiguration.getApiKeyHeader();
-            if (request.headers().contains(apiKeyHeaderName)) {
-                apiKey = request.headers().get(apiKeyHeaderName);
-                // Header is present but empty so init apiKey with empty string
-                return Optional.of(Objects.requireNonNullElse(apiKey, ""));
-            }
+        return switch (source) {
+            case HEADER -> extractFromHeader(request, resolveHeaderNameOrDefault()).or(() ->
+                extractFromQueryParam(request, API_KEY_QUERY_PARAMETER)
+            );
+            case BEARER -> extractFromBearer(request);
+            case QUERY_PARAMETER -> extractFromQueryParam(request, API_KEY_QUERY_PARAMETER);
+        };
+    }
+
+    private String resolveHeaderNameOrDefault() {
+        return apiKeyPolicyConfiguration
+            .resolveHeaderName() // policy config
+            .or(() -> Optional.ofNullable(API_KEY_HEADER)) // gravitee.yaml config
+            .orElse(GraviteeHttpHeader.X_GRAVITEE_API_KEY); // default
+    }
+
+    private static Optional<String> extractFromHeader(HttpPlainRequest request, String headerName) {
+        if (!StringUtils.hasText(headerName) || !request.headers().contains(headerName)) {
             return Optional.empty();
         }
+        return Optional.ofNullable(request.headers().get(headerName));
+    }
 
-        // 2_ Second, search in HTTP headers
-        if (request.headers().contains(API_KEY_HEADER)) {
-            apiKey = request.headers().get(API_KEY_HEADER);
-            // Header is present but empty so init apiKey with empty string
-            return Optional.of(Objects.requireNonNullElse(apiKey, ""));
+    private static Optional<String> extractFromQueryParam(HttpPlainRequest request, @Nullable String paramName) {
+        if (!StringUtils.hasText(paramName) || !request.parameters().containsKey(paramName)) {
+            return Optional.empty();
         }
+        return Optional.ofNullable(request.parameters().getFirst(paramName));
+    }
 
-        // 3_ If not found, search in query parameters
-        if (request.parameters().containsKey(API_KEY_QUERY_PARAMETER)) {
-            apiKey = request.parameters().getFirst(API_KEY_QUERY_PARAMETER);
-            // If query parameter is present but empty, init apiKey with empty string
-            return Optional.of(Objects.requireNonNullElse(apiKey, ""));
+    private static Optional<String> extractFromBearer(HttpPlainRequest request) {
+        if (!request.headers().contains(AUTHORIZATION_HEADER)) {
+            return Optional.empty();
         }
-
-        return Optional.empty();
+        final String authorization = request.headers().get(AUTHORIZATION_HEADER);
+        if (authorization == null || authorization.length() < BEARER_PREFIX.length()) {
+            return Optional.empty();
+        }
+        if (!authorization.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            return Optional.empty();
+        }
+        return Optional.of(authorization.substring(BEARER_PREFIX.length()).trim());
     }
 
     private void cleanupApiKey(HttpPlainExecutionContext ctx) {
-        if (apiKeyPolicyConfiguration == null || !apiKeyPolicyConfiguration.isPropagateApiKey()) {
-            ctx.request().headers().remove(API_KEY_HEADER);
-            ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
-            if (apiKeyPolicyConfiguration != null && apiKeyPolicyConfiguration.getApiKeyHeader() != null) {
-                ctx.request().headers().remove(apiKeyPolicyConfiguration.getApiKeyHeader());
+        if (!apiKeyPolicyConfiguration.isPropagateApiKey()) {
+            switch (apiKeyPolicyConfiguration.resolveSource()) {
+                case BEARER -> ctx.request().headers().remove(AUTHORIZATION_HEADER);
+                case HEADER -> {
+                    ctx.request().headers().remove(resolveHeaderNameOrDefault());
+                    if (StringUtils.hasText(API_KEY_QUERY_PARAMETER)) {
+                        ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
+                    }
+                }
+                case QUERY_PARAMETER -> {
+                    if (StringUtils.hasText(API_KEY_QUERY_PARAMETER)) {
+                        ctx.request().parameters().remove(API_KEY_QUERY_PARAMETER);
+                    }
+                }
             }
         }
         ctx.removeInternalAttribute(ATTR_INTERNAL_API_KEY);
