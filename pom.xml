@@ -129,6 +129,13 @@
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <!-- vaadin/android-json is an outdated org.json fork that shadows the modern one (missing JSONObject.keySet()) and breaks everit-json-schema. -->
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.gravitee.json</groupId>
