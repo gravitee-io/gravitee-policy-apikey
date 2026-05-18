@@ -27,6 +27,8 @@ import io.gravitee.policy.api.PolicyResult;
 import io.gravitee.policy.api.annotations.OnRequest;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
 import java.util.*;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
@@ -45,6 +47,7 @@ public class ApiKeyPolicyV3 {
     /**
      * Policy configuration
      */
+    @NonNull
     protected final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration;
 
     static String API_KEY_HEADER, API_KEY_QUERY_PARAMETER;
@@ -52,8 +55,8 @@ public class ApiKeyPolicyV3 {
     static final String API_KEY_QUERY_PARAMETER_PROPERTY = "policy.api-key.param";
     static final String DEFAULT_API_KEY_QUERY_PARAMETER = "api-key";
 
-    public ApiKeyPolicyV3(ApiKeyPolicyConfiguration apiKeyPolicyConfiguration) {
-        this.apiKeyPolicyConfiguration = apiKeyPolicyConfiguration;
+    public ApiKeyPolicyV3(@Nullable ApiKeyPolicyConfiguration apiKeyPolicyConfiguration) {
+        this.apiKeyPolicyConfiguration = Objects.requireNonNullElse(apiKeyPolicyConfiguration, ApiKeyPolicyConfiguration.DEFAULT);
     }
 
     @OnRequest

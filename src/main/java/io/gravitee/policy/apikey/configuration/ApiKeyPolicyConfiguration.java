@@ -15,9 +15,16 @@
  */
 package io.gravitee.policy.apikey.configuration;
 
+import io.gravitee.common.http.GraviteeHttpHeader;
 import io.gravitee.policy.api.PolicyConfiguration;
+import java.util.Objects;
+import java.util.Optional;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.jspecify.annotations.Nullable;
+import org.springframework.util.StringUtils;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -25,11 +32,34 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
 
     private boolean propagateApiKey = false;
 
+    @Nullable
+    private ApiKeySource source;
+
+    @Nullable
+    private String apiKeyHeader;
+
+    @Deprecated
     private boolean enableCustomApiKeyHeader = false;
 
-    private String apiKeyHeader;
+    public ApiKeySource resolveSource() {
+        return Objects.requireNonNullElse(source, ApiKeySource.HEADER);
+    }
+
+    /** Header name for HEADER source. Falls back to {@code X-Gravitee-Api-Key} when {@code apiKeyHeader} is blank. */
+    public Optional<String> resolveHeaderName() {
+        return StringUtils.hasText(apiKeyHeader) ? Optional.of(apiKeyHeader) : Optional.empty();
+    }
+
+    public static final ApiKeyPolicyConfiguration DEFAULT = new ApiKeyPolicyConfiguration(
+        false,
+        ApiKeySource.HEADER,
+        GraviteeHttpHeader.X_GRAVITEE_API_KEY,
+        false
+    );
 }
