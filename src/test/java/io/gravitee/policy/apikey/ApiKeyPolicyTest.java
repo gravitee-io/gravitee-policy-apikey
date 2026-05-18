@@ -46,6 +46,7 @@ import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.NameCallback;
 import org.apache.kafka.common.security.plain.PlainAuthenticateCallback;
 import org.apache.kafka.common.security.scram.ScramCredentialCallback;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -74,8 +75,7 @@ public class ApiKeyPolicyTest {
     protected static final Date EXPIRE_AT = new Date(System.currentTimeMillis() + 3600000);
     protected static final RuntimeException MOCK_EXCEPTION = new RuntimeException("Mock exception");
 
-    @Mock
-    private ApiKeyPolicyConfiguration configuration;
+    private final ApiKeyPolicyConfiguration configuration = new ApiKeyPolicyConfiguration();
 
     @Mock
     private ApiKeyService apiKeyService;
@@ -113,7 +113,7 @@ public class ApiKeyPolicyTest {
             final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
             final ApiKey apiKey = buildApiKey();
 
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(request.headers()).thenReturn(headers);
             mockApiKeyService(apiKey);
 
@@ -134,7 +134,7 @@ public class ApiKeyPolicyTest {
         void shouldCompleteWhenApiKeyAlreadyInContextInternalAttributes() {
             final ApiKey apiKey = buildApiKey();
 
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
             mockApiKeyService(apiKey);
 
@@ -166,7 +166,7 @@ public class ApiKeyPolicyTest {
         void shouldCompleteAndRemoveApiKeyFromInternalAttributeWhenPropagateApiKeyIsDisabled() {
             final ApiKey apiKey = buildApiKey();
 
-            when(configuration.isPropagateApiKey()).thenReturn(false);
+            configuration.setPropagateApiKey(false);
             when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
             when(request.headers()).thenReturn(mock(HttpHeaders.class));
             when(request.parameters()).thenReturn(mock(MultiValueMap.class));
@@ -185,7 +185,7 @@ public class ApiKeyPolicyTest {
             final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
             final ApiKey apiKey = buildApiKey();
 
-            when(configuration.isPropagateApiKey()).thenReturn(false);
+            configuration.setPropagateApiKey(false);
             when(request.headers()).thenReturn(headers);
             when(request.parameters()).thenReturn(mock(MultiValueMap.class));
             mockApiKeyService(apiKey);
@@ -206,7 +206,7 @@ public class ApiKeyPolicyTest {
             final ApiKey apiKey = buildApiKey();
 
             initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(request.headers()).thenReturn(headers);
             mockApiKeyService(apiKey);
 
@@ -226,7 +226,7 @@ public class ApiKeyPolicyTest {
             final ApiKey apiKey = buildApiKey();
 
             initializeParamNames(customHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
-            when(configuration.isPropagateApiKey()).thenReturn(false);
+            configuration.setPropagateApiKey(false);
             when(request.headers()).thenReturn(headers);
             when(request.parameters()).thenReturn(mock(MultiValueMap.class));
             mockApiKeyService(apiKey);
@@ -245,7 +245,7 @@ public class ApiKeyPolicyTest {
             final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
 
             when(request.parameters()).thenReturn(parameters);
-            when(configuration.isPropagateApiKey()).thenReturn(false);
+            configuration.setPropagateApiKey(false);
             when(request.headers()).thenReturn(HttpHeaders.create());
             mockApiKeyService(apiKey);
 
@@ -265,7 +265,7 @@ public class ApiKeyPolicyTest {
 
             initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
             when(request.parameters()).thenReturn(parameters);
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(request.headers()).thenReturn(HttpHeaders.create());
             mockApiKeyService(apiKey);
 
@@ -285,7 +285,7 @@ public class ApiKeyPolicyTest {
 
             initializeParamNames(DEFAULT_API_KEY_HEADER_PARAMETER, customQueryParam);
             when(request.parameters()).thenReturn(parameters);
-            when(configuration.isPropagateApiKey()).thenReturn(false);
+            configuration.setPropagateApiKey(false);
             when(request.headers()).thenReturn(mock(HttpHeaders.class));
             mockApiKeyService(apiKey);
 
@@ -326,7 +326,7 @@ public class ApiKeyPolicyTest {
             final ApiKey apiKey = buildApiKey();
             apiKey.setExpireAt(new Date(System.currentTimeMillis() - 3600000));
 
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
             mockApiKeyService(apiKey);
             when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
@@ -354,7 +354,7 @@ public class ApiKeyPolicyTest {
             final ApiKey apiKey = buildApiKey();
             apiKey.setRevoked(true);
 
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(ctx.getInternalAttribute(ATTR_INTERNAL_API_KEY)).thenReturn(API_KEY);
             mockApiKeyService(apiKey);
             when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
@@ -381,7 +381,7 @@ public class ApiKeyPolicyTest {
         void shouldInterruptWith401WhenApiKeyNotFound() {
             final HttpHeaders headers = buildHttpHeaders(DEFAULT_API_KEY_HEADER_PARAMETER);
 
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(request.headers()).thenReturn(headers);
             mockApiKeyService(null);
             when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
@@ -406,7 +406,7 @@ public class ApiKeyPolicyTest {
 
         @Test
         void shouldInterruptWith401WhenExceptionOccurred() {
-            when(configuration.isPropagateApiKey()).thenReturn(true);
+            configuration.setPropagateApiKey(true);
             when(request.headers()).thenThrow(MOCK_EXCEPTION);
             when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
 
@@ -506,7 +506,7 @@ public class ApiKeyPolicyTest {
             return parameters;
         }
 
-        private void mockApiKeyService(ApiKey apiKey) {
+        private void mockApiKeyService(@Nullable ApiKey apiKey) {
             when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
             when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
             when(apiKeyService.getByApiAndKey(API_ID, API_KEY)).thenReturn(Optional.ofNullable(apiKey));
@@ -527,9 +527,9 @@ public class ApiKeyPolicyTest {
             when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
-            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
-            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
-            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(true);
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = new ApiKeyPolicyConfiguration();
+            apiKeyPolicyConfiguration.setApiKeyHeader(customHeader);
+            apiKeyPolicyConfiguration.setEnableCustomApiKeyHeader(true);
             final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
             final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
@@ -554,8 +554,8 @@ public class ApiKeyPolicyTest {
             when(apiKeyService.getByApiAndKey(API_ID, "")).thenReturn(Optional.empty());
             when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
 
-            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
-            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = new ApiKeyPolicyConfiguration();
+            apiKeyPolicyConfiguration.setApiKeyHeader(customHeader);
             final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
             final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
@@ -571,29 +571,27 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
-        void shouldFailWhenCustomHeaderIsSetButDisabled() {
+        void shouldSucceedWhenCustomHeaderIsSetEvenIfToggleDisabled() {
+            // enableCustomApiKeyHeader is ignored at runtime: apiKeyHeader is always honored when set.
             final String customHeader = "X-Custom-Header";
             final HttpHeaders headers = HttpHeaders.create();
             headers.add(customHeader, API_KEY);
             when(request.headers()).thenReturn(headers);
             when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
-            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+            final ApiKey apiKey = buildApiKey();
+            mockApiKeyService(apiKey);
 
-            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
-            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
-            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(false);
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = new ApiKeyPolicyConfiguration();
+            apiKeyPolicyConfiguration.setApiKeyHeader(customHeader);
+            apiKeyPolicyConfiguration.setEnableCustomApiKeyHeader(false);
             final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
             final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
-            obs.assertFailure(Throwable.class);
+            obs.assertResult();
 
-            verify(ctx).interruptWith(
-                argThat(failure -> {
-                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
-                    assertEquals("API_KEY_MISSING", failure.key());
-                    return true;
-                })
-            );
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
+            verify(ctx, never()).interruptWith(any());
         }
 
         @Test
@@ -605,9 +603,9 @@ public class ApiKeyPolicyTest {
             when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
             final ApiKey apiKey = buildApiKey();
             mockApiKeyService(apiKey);
-            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = mock(ApiKeyPolicyConfiguration.class);
-            when(apiKeyPolicyConfiguration.getApiKeyHeader()).thenReturn(customHeader);
-            when(apiKeyPolicyConfiguration.isEnableCustomApiKeyHeader()).thenReturn(true);
+            final ApiKeyPolicyConfiguration apiKeyPolicyConfiguration = new ApiKeyPolicyConfiguration();
+            apiKeyPolicyConfiguration.setApiKeyHeader(customHeader);
+            apiKeyPolicyConfiguration.setEnableCustomApiKeyHeader(true);
             final ApiKeyPolicy cut = new ApiKeyPolicy(apiKeyPolicyConfiguration);
             final TestObserver<Void> obs = cut.onRequest(ctx).test();
 
@@ -633,8 +631,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -652,8 +651,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -669,8 +669,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -686,8 +687,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -703,8 +705,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -720,8 +723,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -737,8 +741,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -807,8 +812,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -827,8 +833,9 @@ public class ApiKeyPolicyTest {
                 cut
                     .extractSecurityToken(ctx)
                     .test()
-                    .assertValue(token ->
-                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    .assertValue(
+                        token ->
+                            token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
                     );
             }
 
@@ -1127,7 +1134,7 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
         }
 
-        private void mockApiKeyService(ApiKey apiKey) {
+        private void mockApiKeyService(@Nullable ApiKey apiKey) {
             when(ctx.getComponent(ApiKeyService.class)).thenReturn(apiKeyService);
             when(ctx.getAttribute(ATTR_API)).thenReturn(API_ID);
             when(apiKeyService.getByApiAndMd5Key(API_ID, API_KEY_MD5)).thenReturn(Optional.ofNullable(apiKey));
