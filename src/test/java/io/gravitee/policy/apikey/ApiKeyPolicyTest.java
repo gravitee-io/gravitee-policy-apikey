@@ -36,6 +36,7 @@ import io.gravitee.gateway.reactive.api.context.Response;
 import io.gravitee.gateway.reactive.api.context.kafka.KafkaConnectionContext;
 import io.gravitee.gateway.reactive.api.policy.SecurityToken;
 import io.gravitee.policy.apikey.configuration.ApiKeyPolicyConfiguration;
+import io.gravitee.policy.apikey.configuration.ApiKeySource;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.observers.TestObserver;
 import java.util.Date;
@@ -615,6 +616,255 @@ public class ApiKeyPolicyTest {
             verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
             verify(ctx).setAttribute(ATTR_API_KEY, apiKey.getKey());
             verify(ctx, never()).interruptWith(any());
+        }
+
+        @Nested
+        class ExplicitSource {
+
+            @Test
+            void extractSecurityToken_shouldReturnSecurityToken_whenSourceIsHeader_default() {
+                final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.HEADER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnSecurityToken_whenSourceIsHeader_custom() {
+                final String customHeader = "X-My-Key";
+                final HttpHeaders headers = buildHttpHeaders(customHeader);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.HEADER);
+                config.setApiKeyHeader(customHeader);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnSecurityToken_whenSourceIsBearer() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnSecurityToken_whenSourceIsQueryParameter() {
+                final MultiValueMap<String, String> parameters = buildQueryParameters(DEFAULT_API_KEY_QUERY_PARAMETER);
+                when(request.parameters()).thenReturn(parameters);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.QUERY_PARAMETER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldAcceptBearerSchemeInLowercase() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "bearer " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldAcceptBearerSchemeInUppercase() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "BEARER " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldTrimBearerToken() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer   " + API_KEY + "  ");
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnEmpty_whenAuthorizationSchemeIsNotBearer() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Basic " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut.extractSecurityToken(ctx).test().assertComplete().assertValueCount(0);
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnEmpty_whenBearerHasNoSeparatorSpace() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer" + API_KEY);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut.extractSecurityToken(ctx).test().assertComplete().assertValueCount(0);
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnEmpty_whenAuthorizationHeaderAbsent() {
+                when(request.headers()).thenReturn(HttpHeaders.create());
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut.extractSecurityToken(ctx).test().assertComplete().assertValueCount(0);
+            }
+
+            @Test
+            void extractSecurityToken_shouldReturnInvalidToken_whenBearerTokenIsBlank() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer    ");
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.isInvalid());
+            }
+
+            @Test
+            void extractSecurityToken_shouldUseApiKeyHeaderEvenWhenEnableCustomApiKeyHeaderIsFalse() {
+                final String customHeader = "X-My-Key";
+                final HttpHeaders headers = buildHttpHeaders(customHeader);
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.HEADER);
+                config.setApiKeyHeader(customHeader);
+                config.setEnableCustomApiKeyHeader(false);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void extractSecurityToken_shouldPreferSourceOverLegacyFields() {
+                final HttpHeaders headers = HttpHeaders.create()
+                    .add("Authorization", "Bearer " + API_KEY)
+                    .add("X-Legacy-Header", "should-be-ignored");
+                when(request.headers()).thenReturn(headers);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                config.setApiKeyHeader("X-Legacy-Header");
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+
+                cut
+                    .extractSecurityToken(ctx)
+                    .test()
+                    .assertValue(token ->
+                        token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+                    );
+            }
+
+            @Test
+            void shouldRemoveAuthorizationHeader_whenSourceIsBearer_andPropagateDisabled() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+                final ApiKey apiKey = buildApiKey();
+                mockApiKeyService(apiKey);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                config.setPropagateApiKey(false);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+                final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+                obs.assertResult();
+                assertFalse(headers.contains("Authorization"));
+            }
+
+            @Test
+            void shouldKeepAuthorizationHeader_whenSourceIsBearer_andPropagateEnabled() {
+                final HttpHeaders headers = HttpHeaders.create().add("Authorization", "Bearer " + API_KEY);
+                when(request.headers()).thenReturn(headers);
+                final ApiKey apiKey = buildApiKey();
+                mockApiKeyService(apiKey);
+
+                final ApiKeyPolicyConfiguration config = new ApiKeyPolicyConfiguration();
+                config.setSource(ApiKeySource.BEARER);
+                config.setPropagateApiKey(true);
+                final ApiKeyPolicy cut = new ApiKeyPolicy(config);
+                final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+                obs.assertResult();
+                assertTrue(headers.contains("Authorization"));
+            }
         }
     }
 
