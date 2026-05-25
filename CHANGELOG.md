@@ -1,3 +1,10 @@
+# [6.0.0-alpha.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.0-alpha.1...6.0.0-alpha.2) (2026-05-25)
+
+
+### Features
+
+* **apikey:** support Authorization Bearer as a token source ([bab2cc8](https://github.com/gravitee-io/gravitee-policy-apikey/commit/bab2cc8e0ce78ea31c4a01f8ae496c817ba7715b))
+
 # [6.0.0-alpha.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.2.0...6.0.0-alpha.1) (2026-03-02)
 
 
