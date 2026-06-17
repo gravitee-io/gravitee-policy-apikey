@@ -1,3 +1,21 @@
+# [6.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.2.0...6.0.0) (2026-06-17)
+
+
+### chore
+
+* bump dependencies ([19d6e1f](https://github.com/gravitee-io/gravitee-policy-apikey/commit/19d6e1f3d96299bb8a661a693837dce62d44971f))
+
+
+### Features
+
+* **apikey:** support Authorization Bearer as a token source ([80f7bc4](https://github.com/gravitee-io/gravitee-policy-apikey/commit/80f7bc48ccee5c549a648afc4014434abea54adb))
+* use new logging system ([8f41d0e](https://github.com/gravitee-io/gravitee-policy-apikey/commit/8f41d0e6d8290944df03632e9d263dbc6940a48b))
+
+
+### BREAKING CHANGES
+
+* bump gravitee-parent
+
 # [5.2.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.1.0...5.2.0) (2025-10-31)
 
 
