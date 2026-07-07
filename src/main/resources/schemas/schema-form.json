@@ -13,19 +13,19 @@
             "gioConfig": {
                 "enumLabelMap": {
                     "HEADER": "Get API key in headers (with fallback on query parameter 'api-key')",
-                    "BEARER": "Get API key in authorization Bearer header (incompatible with APIv2 and OAuth)",
-                    "QUERY_PARAMETER": "Get API key in query parameter"
+                    "BEARER": "Get API key in authorization Bearer header (incompatible with APIv2 and OAuth). Requires a gateway 4.12.x or later.",
+                    "QUERY_PARAMETER": "Get API key in query parameter. Requires a gateway 4.12.x or later."
                 }
             }
         },
         "enableCustomApiKeyHeader": {
             "title": "Custom API Key header",
-            "description": "Overrides the default API Key header",
+            "description": "No longer required for gateways 4.12.x and later, where the name set in 'API Key Header' is always applied. Only enable it for gateways older than 4.12.x.",
             "type": "boolean",
             "gioConfig": {
                 "displayIf": {
                     "$eq": {
-                        "value.source": "BAD_VALUE"
+                        "value.source": "HEADER"
                     }
                 }
             }
