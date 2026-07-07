@@ -1,3 +1,10 @@
+## [6.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.0...6.0.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **apikey:** restore custom API Key header toggle in console form ([f1ddd25](https://github.com/gravitee-io/gravitee-policy-apikey/commit/f1ddd25b6abd26e347f4407df721d598d1136007))
+
 # [6.0.0](https://github.com/gravitee-io/gravitee-policy-apikey/compare/5.2.0...6.0.0) (2026-06-17)
 
 
