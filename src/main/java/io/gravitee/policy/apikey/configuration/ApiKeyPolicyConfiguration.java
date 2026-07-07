@@ -44,6 +44,11 @@ public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
     @Nullable
     private String apiKeyHeader;
 
+    /**
+     * No longer required since 4.12.x: the custom {@link #apiKeyHeader} is always applied when set.
+     * Kept only for backward compatibility with gateways older than 4.12.x. To be removed once those
+     * versions are no longer supported.
+     */
     @Deprecated
     private boolean enableCustomApiKeyHeader = false;
 
