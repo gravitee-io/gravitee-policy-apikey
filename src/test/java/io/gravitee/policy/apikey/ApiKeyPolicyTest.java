@@ -219,6 +219,28 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
+        void shouldCompleteWhenNullConfigurationAndGlobalCustomHeaderConfigured() {
+            // APIM-14651: a plan with no explicit security configuration (null) must still honor the
+            // gateway-wide policy.api-key.header setting, exactly like a plan with an empty ("{}") configuration does.
+            final String globalCustomHeader = "X-Custom-Api-Key";
+            final HttpHeaders headers = buildHttpHeaders(globalCustomHeader);
+            final ApiKey apiKey = buildApiKey();
+
+            initializeParamNames(globalCustomHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(null);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertResult();
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx, never()).interruptWith(any());
+        }
+
+        @Test
         void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() {
             final String customHeader = "My-Custom-Api-Key";
 

@@ -61,10 +61,13 @@ public class ApiKeyPolicyConfiguration implements PolicyConfiguration {
         return StringUtils.hasText(apiKeyHeader) ? Optional.of(apiKeyHeader) : Optional.empty();
     }
 
-    public static final ApiKeyPolicyConfiguration DEFAULT = new ApiKeyPolicyConfiguration(
-        false,
-        ApiKeySource.HEADER,
-        GraviteeHttpHeader.X_GRAVITEE_API_KEY,
-        false
-    );
+    /**
+     * {@code apiKeyHeader} is intentionally left {@code null} here: a {@code null} plan configuration means
+     * "no header explicitly configured on this plan", and must fall through to the gateway-wide
+     * {@code policy.api-key.header} setting the same way an explicit empty ({@code {}}) configuration does.
+     * Hardcoding {@link GraviteeHttpHeader#X_GRAVITEE_API_KEY} here made {@link #resolveHeaderName()} report a
+     * header as "configured" even when none was, which caused the gateway-wide header to be silently ignored
+     * for plans with no explicit security configuration (APIM-14651).
+     */
+    public static final ApiKeyPolicyConfiguration DEFAULT = new ApiKeyPolicyConfiguration(false, ApiKeySource.HEADER, null, false);
 }
