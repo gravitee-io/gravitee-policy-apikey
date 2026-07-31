@@ -219,6 +219,52 @@ public class ApiKeyPolicyTest {
         }
 
         @Test
+        void shouldCompleteWhenNullConfigurationAndGlobalCustomHeaderConfigured() {
+            // APIM-14651: a plan with no explicit security configuration (null) must still honor the
+            // gateway-wide policy.api-key.header setting, exactly like a plan with an empty ("{}") configuration does.
+            final String globalCustomHeader = "X-Custom-Api-Key";
+            final HttpHeaders headers = buildHttpHeaders(globalCustomHeader);
+            final ApiKey apiKey = buildApiKey();
+
+            initializeParamNames(globalCustomHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(mock(MultiValueMap.class));
+            mockApiKeyService(apiKey);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(null);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertResult();
+
+            verify(ctx).setAttribute(ContextAttributes.ATTR_APPLICATION, apiKey.getApplication());
+            verify(ctx, never()).interruptWith(any());
+        }
+
+        @Test
+        void shouldInterruptWith401WhenGlobalCustomHeaderConfiguredButDefaultHeaderUsed() {
+            final String globalCustomHeader = "X-Custom-Api-Key";
+            final HttpHeaders headers = buildHttpHeaders(X_GRAVITEE_API_KEY);
+
+            initializeParamNames(globalCustomHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(request.headers()).thenReturn(headers);
+            when(request.parameters()).thenReturn(new LinkedMultiValueMap<>());
+            when(ctx.interruptWith(any())).thenReturn(Completable.error(MOCK_EXCEPTION));
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(null);
+            final TestObserver<Void> obs = cut.onRequest(ctx).test();
+
+            obs.assertFailure(Throwable.class);
+
+            verify(ctx).interruptWith(
+                argThat(failure -> {
+                    assertEquals(HttpStatusCode.UNAUTHORIZED_401, failure.statusCode());
+                    assertEquals("API_KEY_MISSING", failure.key());
+                    return true;
+                })
+            );
+        }
+
+        @Test
         void shouldCompleteAndRemoveApiKeyFromCustomHeaderWhenPropagateApiKeyIsDisabled() {
             final String customHeader = "My-Custom-Api-Key";
 
@@ -446,6 +492,25 @@ public class ApiKeyPolicyTest {
             when(request.headers()).thenReturn(headers);
 
             final ApiKeyPolicy cut = new ApiKeyPolicy(configuration);
+            final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
+
+            obs.assertValue(
+                token -> token.getTokenType().equals(SecurityToken.TokenType.API_KEY.name()) && token.getTokenValue().equals(API_KEY)
+            );
+        }
+
+        @Test
+        void extractSecurityToken_shouldReturnSecurityToken_whenNullConfigurationAndGlobalCustomHeaderConfigured() {
+            // APIM-14651: plan selection goes through extractSecurityToken(), which relies on the same
+            // resolveHeaderNameOrDefault() fallback chain as onRequest(). A plan with no explicit security
+            // configuration (null) must still resolve the api key via the gateway-wide custom header here too.
+            final String globalCustomHeader = "X-Custom-Api-Key";
+            final HttpHeaders headers = buildHttpHeaders(globalCustomHeader);
+
+            initializeParamNames(globalCustomHeader, DEFAULT_API_KEY_QUERY_PARAMETER);
+            when(request.headers()).thenReturn(headers);
+
+            final ApiKeyPolicy cut = new ApiKeyPolicy(null);
             final TestObserver<SecurityToken> obs = cut.extractSecurityToken(ctx).test();
 
             obs.assertValue(
