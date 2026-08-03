@@ -1,3 +1,10 @@
+## [6.0.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.1...6.0.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* stop hardcoding apiKeyHeader default ([d50b566](https://github.com/gravitee-io/gravitee-policy-apikey/commit/d50b566196efdb79a13e549c622e9b6b4254e30d))
+
 ## [6.0.1](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.0...6.0.1) (2026-07-07)
 
 
