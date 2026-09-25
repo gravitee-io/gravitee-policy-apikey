@@ -30,12 +30,15 @@ resources associated with your API.
 == Compatibility with APIM
 
 |===
-| Plugin version | APIM version
-| 6.x            | 4.11.x to latest
-| 5.x            | 4.6.x to 4.10.x
-| 4.x            | 4.0.x to 4.5.x
-| 2.x            | 3.x
+| Plugin version | APIM version     | Java version
+
+| 6.x            | 4.11.x to latest | 21
+| 5.x            | 4.6.x to 4.10.x  | 17
+| 4.x            | 4.0.x to 4.5.x   | 17
+| 2.x            | 3.x              | 11
 |===
+
+The *Java version* column is the bytecode level of the latest release of each line, which sets the minimum runtime able to load the artifact.
 
 == Configuration
 
