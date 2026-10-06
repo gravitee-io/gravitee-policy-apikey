@@ -1,3 +1,10 @@
+## [6.0.3](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.2...6.0.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* **deps:** bump gravitee-apim to 4.12.21 ([b660da0](https://github.com/gravitee-io/gravitee-policy-apikey/commit/b660da0de323af8fbdfdcf7ae5d1036f838ede67))
+
 ## [6.0.2](https://github.com/gravitee-io/gravitee-policy-apikey/compare/6.0.1...6.0.2) (2026-08-03)
 
 
